@@ -26,8 +26,8 @@ pub async fn route(conn: Conn) -> Conn {
         &[
             ("client_id", config::CLIENT_ID),
             ("response_type", "code"),
-            ("redirect_uri", redirect.unwrap()),
-            ("scope", "XboxLive.signin%20offline_access"),
+            ("redirect_uri", &get_redirect_url(redirect.unwrap())),
+            ("scope", "XboxLive.signin offline_access"),
             ("state", "UNNEEDED"),
         ],
     ) {
@@ -39,6 +39,16 @@ pub async fn route(conn: Conn) -> Conn {
             .with_body(format!("Error creating redirect URL: {err}"))
             .halt(),
     }
+}
+
+#[inline]
+fn get_redirect_url(host: &str) -> String {
+    let prefix = if host.starts_with("localhost") {
+        "http"
+    } else {
+        "https"
+    };
+    format!("{prefix}://{host}/auth-redirect")
 }
 
 #[cfg(test)]
