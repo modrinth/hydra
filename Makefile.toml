@@ -1,0 +1,22 @@
+[env]
+RUST_BACKTRACE = 1
+RUST_LOG = "debug"
+
+[tasks.format]
+install_crate = "rustfmt"
+command = "cargo"
+args = ["fmt", "--", "--emit=files"]
+
+[tasks.check]
+install_crate = "clippy"
+command = "cargo"
+args = ["clippy"]
+
+[tasks.run]
+command = "cargo"
+args = ["run"]
+
+[tasks.release]
+command = "cargo"
+args = ["build", "--release", "--features", "release"]
+dependencies = ["clippy"]
