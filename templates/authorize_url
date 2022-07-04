@@ -1,0 +1,6 @@
+{{ "https://login.live.com/oauth20_authorize.srf" -}}
+?client_id={{ client_id|urlencode -}}
+&response_type={{ "code" -}}
+&redirect_uri={{ redirect_uri|urlencode -}}
+&scope={{ "XboxLive.signin offline_access"|urlencode -}}
+&state={{ "UNNEEDED" -}}

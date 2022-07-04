@@ -7,14 +7,17 @@ license = "AGPL-3.0-or-later"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+askama = "0.11.0"
 directories = "4.0"
 eyre = "0.6"
 color-eyre = "0.5"
-log = "0.4"
-pretty_env_logger = "0.4"
+serde_json = "1.0"
 sled = {version = "0.34", features = ["compression"]}
 smol = "1.2"
 url = "2.2"
+
+log = "0.4"
+pretty_env_logger = "0.4"
 
 trillium = "0.2"
 trillium-askama = "0.3"

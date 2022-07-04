@@ -703,11 +703,13 @@ dependencies = [
 name = "hydra"
 version = "0.1.0"
 dependencies = [
+ "askama",
  "color-eyre",
  "directories",
  "eyre",
  "log",
  "pretty_env_logger",
+ "serde_json",
  "sled",
  "smol",
  "trillium",

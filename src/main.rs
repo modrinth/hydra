@@ -4,6 +4,7 @@
 
 mod config;
 mod routes;
+mod stages;
 
 use std::sync::Arc;
 use trillium::State;
@@ -11,10 +12,26 @@ use trillium::State;
 #[cfg(feature = "tls")]
 use trillium_rustls::RustlsAcceptor;
 
+pub type Connector =
+    trillium_rustls::RustlsConnector<trillium_smol::TcpConnector>;
+
+fn init_logger() {
+    let mut builder = pretty_env_logger::formatted_builder();
+    builder
+        .filter_level(log::LevelFilter::Info)
+        .filter_module("trillium_server_common", log::LevelFilter::Warn)
+        .filter_module("sled", log::LevelFilter::Error);
+
+    // HACK: Replicate the .parse_env function, since pretty_env_logger doesn't have a version of env_logger with it implemented
+    if let Ok(env) = std::env::var("RUST_LOG") {
+        builder.parse_filters(&env);
+    }
+    builder.init();
+}
+
 fn main() -> eyre::Result<()> {
-    pretty_env_logger::formatted_builder()
-        .filter_module("hydra", log::LevelFilter::Info)
-        .init();
+    // HACK: Pretty env logger doesn't support the .parse_env method, so this forces it
+    init_logger();
     color_eyre::install()?;
 
     let config = Arc::new(config::Config::init());
@@ -48,17 +65,19 @@ fn main() -> eyre::Result<()> {
     let cfg = smol::block_on(exec.run(async {
         log::debug!("Giving certificates to Rustls");
         let (tls_cert, tls_key) = get_cert.await?;
-        Ok::<_, eyre::Error>(cfg.with_acceptor(RustlsAcceptor::from_pkcs8(&tls_cert, &tls_key)))
+        Ok::<_, eyre::Error>(
+            cfg.with_acceptor(RustlsAcceptor::from_pkcs8(&tls_cert, &tls_key)),
+        )
     }))?;
 
-    log::info!("Started Hydra!");
     smol::block_on(exec.run(async {
-        cfg.run_async((
+        let server = cfg.run_async((
             State::new(db.await?),
             trillium_head::Head::new(),
             routes::router(),
-        ))
-        .await;
+        ));
+        log::info!("Started Hydra!");
+        server.await;
         Ok(())
     }))
 }
