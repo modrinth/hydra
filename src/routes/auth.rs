@@ -31,7 +31,14 @@ pub async fn route(conn: Conn) -> Conn {
             .await,
         conn
     );
+    let stages::xbl_signin::XBLLogin {
+        token: xbl_token,
+        uhs,
+    } = conn_try!(
+        stages::xbl_signin::login_xbl(&client, &access_token).await,
+        conn
+    );
 
-    log::debug!("Fetched token: {access_token}");
+    log::debug!("Fetched token: {xbl_token} (hash: {uhs})");
     conn
 }
