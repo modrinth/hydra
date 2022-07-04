@@ -1,0 +1,10 @@
+{
+    "Properties": {
+        "SandboxId": "RETAIL",
+        "UserTokens": [
+            "{{ user_token }}"
+        ]
+    },
+    "RelyingParty": "rp://api.minecraftservices.com/",
+    "TokenType": "JWT"
+}

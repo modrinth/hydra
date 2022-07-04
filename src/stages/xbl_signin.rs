@@ -39,7 +39,7 @@ pub async fn login_xbl(
     let json = serde_json::from_str::<serde_json::Value>(&body)?;
     let token = Some(&json)
         .and_then(|it| it.get("Token")?.as_str().map(String::from))
-        .ok_or(eyre::eyre!("Response didn't contain valid token"))?;
+        .ok_or(eyre::eyre!("XBL response didn't contain valid token"))?;
     let uhs = Some(&json)
         .and_then(|it| {
             it.get("DisplayClaims")?
@@ -49,7 +49,7 @@ pub async fn login_xbl(
                 .as_str()
                 .map(String::from)
         })
-        .ok_or(eyre::eyre!("Response didn't contain valid user hash"))?;
+        .ok_or(eyre::eyre!("XBL response didn't contain valid user hash"))?;
 
     Ok(XBLLogin { token, uhs })
 }

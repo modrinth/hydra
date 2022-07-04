@@ -1,10 +1,11 @@
-//! Main authentication flow for &Hydra
+//! Main authentication flow for Hydra
 use crate::stages;
 
 use std::collections::HashMap;
 use trillium::{conn_try, Conn};
 use trillium_client as c;
 
+// TODO: Rate limit?
 pub async fn route(conn: Conn) -> Conn {
     let params = url::form_urlencoded::parse(conn.querystring().as_bytes())
         .collect::<HashMap<_, _>>();
@@ -31,6 +32,7 @@ pub async fn route(conn: Conn) -> Conn {
             .await,
         conn
     );
+
     let stages::xbl_signin::XBLLogin {
         token: xbl_token,
         uhs,
@@ -39,6 +41,16 @@ pub async fn route(conn: Conn) -> Conn {
         conn
     );
 
-    log::debug!("Fetched token: {xbl_token} (hash: {uhs})");
-    conn
+    match conn_try!(
+        stages::xsts_token::get_xsts_token(&client, &xbl_token).await,
+        conn
+    ) {
+        stages::xsts_token::XSTSResponse::Unauthorized(err) => {
+            conn.with_status(401).with_body(err).halt()
+        }
+        stages::xsts_token::XSTSResponse::Success { token: xsts_token } => {
+            log::debug!("Got XSTS token: {xsts_token}");
+            conn
+        }
+    }
 }
