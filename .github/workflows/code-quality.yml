@@ -1,0 +1,32 @@
+name: "Code Quality"
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: "always"
+
+jobs:
+  lint:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "action/checkout@v2"
+      - name: "Install toolchain"
+        uses: "actions-rs/toolchain@v1"
+        with:
+          toolchain: "nightly"
+          override: true
+          components: "rustfmt", "clippy"
+      - name: "Cache artifacts"
+        id: "cache-build"
+        uses: "actions/cache@v2"
+        with:
+          path: "target/**"
+          key: "${{ runner.os }}-build-cache"
+      - name: "Annotate with warnings"
+        uses: "actions-rs/clippy-check@v1"
+        with:
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          args: "--all-features"
