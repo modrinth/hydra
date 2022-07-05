@@ -1,5 +1,9 @@
 # Hydra - Minecraft Microsoft Authentication Flow
-- TODO: `shields.io` tags
+![GitHub branch checks state](https://img.shields.io/github/checks-status/modrinth/hydra/master)
+![GitHub license](https://img.shields.io/github/license/modrinth/hydra)
+![Discord](https://img.shields.io/discord/734077874708938864)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/modrinth/hydra)
+![GitHub issues](https://img.shields.io/github/issues/modrinth/hydra)
 
 ## Introduction
 Hydra is a simple wrapper around the Microsoft authentication flow intended to provide a way for launcher developers to authenticate accounts without needing to compile client-side secrets in code.

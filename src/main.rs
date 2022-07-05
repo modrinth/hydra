@@ -30,7 +30,6 @@ fn init_logger() {
 }
 
 fn main() -> eyre::Result<()> {
-    // HACK: Pretty env logger doesn't support the .parse_env method, so this forces it
     init_logger();
     color_eyre::install()?;
 
