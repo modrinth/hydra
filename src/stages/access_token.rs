@@ -15,7 +15,7 @@ struct AccessTokenTemplate<'a> {
     redirect_uri: &'a str,
 }
 
-pub async fn fetch_access_token(
+pub async fn fetch_token(
     client: &c::Client<crate::Connector>,
     host: &str,
     code: &str,

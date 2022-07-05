@@ -9,7 +9,7 @@ struct LoginTemplate<'a> {
     redirect_uri: &'a str,
 }
 
-pub fn get_login_url(host: &str) -> eyre::Result<String> {
+pub fn get_url(host: &str) -> eyre::Result<String> {
     let data = LoginTemplate {
         client_id: config::CLIENT_ID,
         redirect_uri: &super::get_redirect_url(host),

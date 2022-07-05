@@ -1,7 +1,7 @@
 //! Login route for Hydra, redirects to the Microsoft login page before going to the redirect route
 use crate::stages::login_redirect;
 use eyre::WrapErr;
-use trillium::{conn_try, Conn, HeaderValue, KnownHeaderName};
+use trillium::{conn_try, Conn, HeaderValue, KnownHeaderName, Status};
 
 #[allow(clippy::unused_async)]
 pub async fn route(conn: Conn) -> Conn {
@@ -20,13 +20,12 @@ pub async fn route(conn: Conn) -> Conn {
         conn
     );
     let url = conn_try!(
-        login_redirect::get_login_url(host)
-            .wrap_err("Failed to create login URL"),
+        login_redirect::get_url(host).wrap_err("Failed to create login URL"),
         conn
     );
 
     log::trace!("GET {url}");
-    conn.with_status(303)
+    conn.with_status(Status::SeeOther)
         .with_header(KnownHeaderName::Location, url)
 }
 

@@ -2,8 +2,15 @@
 use crate::stages;
 
 use std::collections::HashMap;
-use trillium::{conn_try, Conn};
+use trillium::{conn_try, Conn, Status};
+use trillium_askama::{AskamaConnExt, Template};
 use trillium_client as c;
+
+#[derive(Template)]
+#[template(path = "auth_response.json", escape = "none")]
+struct RouteResponse<'a> {
+    bearer_token: &'a str,
+}
 
 // TODO: Rate limit?
 pub async fn route(conn: Conn) -> Conn {
@@ -19,17 +26,16 @@ pub async fn route(conn: Conn) -> Conn {
     let host = conn.inner().host();
     if host.is_none() {
         return conn
-            .with_status(400)
+            .with_status(Status::BadRequest)
             .with_body(
                 "Tried to use the redirect route without knowing the hostname",
             )
             .halt();
     }
 
-    log::info!("Signing in with code {}", code);
+    log::info!("Signing in with code {code}");
     let access_token = conn_try!(
-        stages::access_token::fetch_access_token(&client, host.unwrap(), code)
-            .await,
+        stages::access_token::fetch_token(&client, host.unwrap(), code).await,
         conn
     );
 
@@ -42,15 +48,22 @@ pub async fn route(conn: Conn) -> Conn {
     );
 
     match conn_try!(
-        stages::xsts_token::get_xsts_token(&client, &xbl_token).await,
+        stages::xsts_token::fetch_token(&client, &xbl_token).await,
         conn
     ) {
         stages::xsts_token::XSTSResponse::Unauthorized(err) => {
-            conn.with_status(401).with_body(err).halt()
+            conn.with_status(Status::Forbidden).with_body(err).halt()
         }
         stages::xsts_token::XSTSResponse::Success { token: xsts_token } => {
-            log::debug!("Got XSTS token: {xsts_token}");
-            conn
+            let bearer_token = conn_try!(
+                stages::bearer_token::fetch_bearer(&client, &xsts_token, &uhs)
+                    .await,
+                conn
+            );
+            log::info!("Signin for code {code} successful");
+            conn.render(RouteResponse {
+                bearer_token: &bearer_token,
+            })
         }
     }
 }

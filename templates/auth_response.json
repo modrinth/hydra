@@ -1,0 +1,4 @@
+{
+    "token": "{{ bearer_token }}",
+    "expires_after": 86400
+}

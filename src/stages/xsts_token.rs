@@ -16,7 +16,7 @@ pub enum XSTSResponse {
     Success { token: String },
 }
 
-pub async fn get_xsts_token(
+pub async fn fetch_token(
     client: &c::Client<crate::Connector>,
     token: &str,
 ) -> eyre::Result<XSTSResponse> {
@@ -40,6 +40,7 @@ pub async fn get_xsts_token(
             .map(|it| XSTSResponse::Success { token: it })
             .ok_or(eyre::eyre!("XSTS response didn't contain valid token!")),
         Status::Forbidden => Ok(XSTSResponse::Unauthorized(
+            #[allow(clippy::unreadable_literal)]
             match json.get("XErr").unwrap().as_i64().unwrap() {
                 2148916238 => String::from(
                     "Underage XBox Live account needs to be added to a family",
