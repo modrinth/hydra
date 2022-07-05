@@ -7,6 +7,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: "always"
+  HYDRA_CLIENT_ID: "dummy"
+  HYDRA_CLIENT_SECRET: "dummy"
 
 jobs:
   lint:
