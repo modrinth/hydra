@@ -21,6 +21,7 @@
             rust-analyzer
           ])
           pkgs.cargo-make
+          pkgs.act
         ];
       };
     });

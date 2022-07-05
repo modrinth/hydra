@@ -18,7 +18,7 @@ jobs:
         with:
           toolchain: "nightly"
           override: true
-          components: "rustfmt", "clippy"
+          components: "rustfmt, clippy"
       - name: "Cache artifacts"
         id: "cache-build"
         uses: "actions/cache@v2"
