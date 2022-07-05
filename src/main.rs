@@ -40,8 +40,8 @@ fn main() -> eyre::Result<()> {
 
     #[cfg(feature = "tls")]
     let get_cert = exec.spawn(async {
-        log::debug!("Reading TLS certificates");
         use smol::{fs, future};
+        log::debug!("Reading TLS certificates");
 
         future::try_zip(fs::read(&config.cert_file), fs::read(&config.key_file))
             .await
