@@ -8,9 +8,23 @@ use trillium_client as c;
 use uuid::Uuid;
 
 #[derive(Template)]
-#[template(path = "sock_response.json")]
+#[template(path = "socket_response.json")]
 struct SockResponse<'a> {
     bearer_token: &'a str,
+}
+
+macro_rules! ws_conn_try {
+    ($status:path, $res:expr => $conn:expr, $ws_conn:expr) => {
+        match $res {
+            Ok(res) => res,
+            Err(err) => {
+                let err = super::socket::render_error(&err.to_string());
+                $ws_conn.send_string(err.clone()).await;
+                trillium::log_error!($ws_conn.close().await);
+                return $conn.with_status($status).with_body(err);
+            }
+        }
+    };
 }
 
 pub async fn route(conn: Conn) -> Conn {
@@ -41,39 +55,44 @@ pub async fn route(conn: Conn) -> Conn {
         .ok()
         .and_then(|it| state.auth_sockets.get_mut(&it))
     {
-        Some(sock) => sock,
+        Some(id) => id,
         None => return conn.with_status(Status::BadRequest).with_body(
-            "State was not associated with a websocket, are you using the redirect?",
+            "Invalid state sent, you probably need to get a new connection id",
         ),
     };
     let ws_conn = ws_conn.value_mut();
 
-    let host = conn_try!(
+    let host = ws_conn_try!(
+        Status::InternalServerError,
         conn.inner().host().ok_or(eyre::eyre!(
             "Tried to use authentication route when own hostname is unknown!"
-        )),
-        conn
+        )) => conn, ws_conn
     );
 
     // TODO: integrate sock
     log::info!("Signing in with code {code}");
-    let access_token = conn_try!(
-        stages::access_token::fetch_token(&client, host, code).await,
-        conn
+    let access_token = ws_conn_try!(
+        Status::InternalServerError,
+        stages::access_token::fetch_token(&client, host, code).await
+        => conn, ws_conn
     );
 
     let stages::xbl_signin::XBLLogin {
         token: xbl_token,
         uhs,
-    } = conn_try!(
-        stages::xbl_signin::login_xbl(&client, &access_token).await,
-        conn
+    } = ws_conn_try!(
+        Status::InternalServerError,
+        stages::xbl_signin::login_xbl(&client, &access_token).await
+        => conn, ws_conn
     );
 
-    match conn_try!(
-        stages::xsts_token::fetch_token(&client, &xbl_token).await,
-        conn
-    ) {
+    let xsts_response = ws_conn_try!(
+        Status::InternalServerError,
+        stages::xsts_token::fetch_token(&client, &xbl_token).await
+        => conn, ws_conn
+    );
+
+    match xsts_response {
         stages::xsts_token::XSTSResponse::Unauthorized(err) => {
             ws_conn
                 .send_string(super::socket::render_error(&format!(

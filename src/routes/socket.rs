@@ -91,9 +91,9 @@ pub async fn sock(mut conn: WebSocketConn) {
 
     if let Some(mut old_conn) = state.auth_sockets.insert(conn_id, conn) {
         old_conn
-            .send_string(render_error(&String::from(
+            .send_string(render_error(
                 "New connection created from this address",
-            )))
+            ))
             .await;
         trillium::log_error!(old_conn.close().await);
     }

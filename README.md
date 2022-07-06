@@ -9,13 +9,23 @@
 Hydra is a simple wrapper around the Microsoft authentication flow intended to provide a way for launcher developers to authenticate accounts without needing to compile client-side secrets in code.
 
 ## Usage
-To get a Minecraft bearer token, open a browser to the `/login` route and allow the user to sign into their Microsoft account. The response is JSON encoded and has the following format:
+Hydra is based on a web socket, and to begin you will need to connect to one using the `/` route. You will then receive a message of the following format:
+```json
+{"login_code": <LOGIN CODE>}
+```
+
+This contains the UUID needed to use the flow. While the code should be the same per computer, this route must be called in order to have the socket open.
+
+Next, you will need to open a web browser to the `/login` route with the `id` query parameter set to the login code you just got. Once the user signs in, a message with the following format will be sent over the socket:
+
 ```json
 {
     "token": <BEARER TOKEN>,
-    "expires": <TIME IN SECONDS UNTIL THE TOKEN EXPIRES>,
-    "flow_done": true
+    "expires": <SECONDS UNTIL EXPIRATION>
 }
 ```
 
-The sole purpose of the `flow_done` field is to be a sentinel which makes it easier to distinguish the successful login from any other response. Errors should be handled by the application as they are received.
+If any errors occur, a message of the following form will be sent and the socket will be closed:
+```json
+{"error": <ERROR MESSAGE>}
+```
