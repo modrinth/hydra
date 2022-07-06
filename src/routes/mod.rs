@@ -4,6 +4,7 @@ use trillium_router::Router;
 
 mod auth;
 mod login;
+mod socket;
 
 pub fn router() -> Router {
     trillium_router::routes!(
@@ -12,6 +13,7 @@ pub fn router() -> Router {
         },
         get "/login" login::route,
         get "/auth-redirect" auth::route,
+        get "/" socket::route(),
     )
 }
 

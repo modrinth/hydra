@@ -1,5 +1,7 @@
 //! Hydra configuration
+#[allow(unused)]
 use std::path::PathBuf;
+use std::time::Duration;
 
 // TODO: we may want to encrypt one or both of these at compile time
 pub const CLIENT_ID: &str = env!("HYDRA_CLIENT_ID");
@@ -9,7 +11,8 @@ pub const CLIENT_SECRET: &str = env!("HYDRA_CLIENT_SECRET");
 pub struct Config {
     pub port: u16,
     pub host: String,
-    pub db_dir: PathBuf,
+    pub rate_limit: u8,
+    pub rate_limit_expires: Duration,
     #[cfg(feature = "tls")]
     pub cert_file: PathBuf,
     #[cfg(feature = "tls")]
@@ -28,7 +31,7 @@ macro_rules! config_option {
 impl Config {
     pub fn init() -> Self {
         let port = config_option!(
-            env "HYDRA_PORT" => |it| str::parse(&it).ok(),
+            env "HYDRA_PORT" => |it| it.parse::<u16>().ok(),
             default 8080
         );
 
@@ -37,12 +40,22 @@ impl Config {
             default String::from("127.0.0.1")
         );
 
-        let dirs = directories::ProjectDirs::from("com", "Modrinth", "Hydra").unwrap();
-
-        let db_dir = config_option!(
-            env "HYDRA_DB" => |it| Some(PathBuf::from(it)),
-            default dirs.data_dir().join("db")
+        let rate_limit = config_option!(
+            env "HYDRA_RATE_LIMIT" => |it| it.parse::<u8>().ok(),
+            default 10
         );
+
+        let rate_limit_expires = config_option!(
+            env "HYDRA_RATE_LIMIT_EXPIRES" => |it| {
+                let minutes = it.parse::<u64>().ok()?;
+                Some(Duration::from_secs(minutes * 60))
+            },
+            default Duration::from_secs(30 * 60)
+        );
+
+        #[allow(unused_variables)]
+        let dirs =
+            directories::ProjectDirs::from("com", "Modrinth", "Hydra").unwrap();
 
         #[cfg(feature = "tls")]
         let cert_file = config_option!(
@@ -59,20 +72,12 @@ impl Config {
         Self {
             port,
             host,
-            db_dir,
+            rate_limit,
+            rate_limit_expires,
             #[cfg(feature = "tls")]
             cert_file,
             #[cfg(feature = "tls")]
             key_file,
         }
-    }
-}
-
-impl From<&Config> for sled::Config {
-    fn from(config: &Config) -> Self {
-        Self::default()
-            .path(config.db_dir.clone())
-            .use_compression(true)
-            .mode(sled::Mode::LowSpace)
     }
 }

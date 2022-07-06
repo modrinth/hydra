@@ -8,6 +8,11 @@ install_crate = "clippy"
 command = "cargo"
 args = ["clippy", "--all-features"]
 
+[tasks.test]
+command = "cargo"
+args = ["test", "--features", "integration-test"]
+dependencies = ["check"]
+
 [tasks.run]
 command = "cargo"
 args = ["run"]
@@ -19,4 +24,4 @@ RUST_LOG = "info,hydra=trace"
 [tasks.release]
 command = "cargo"
 args = ["build", "--release", "--features", "release"]
-dependencies = ["clippy"]
+dependencies = ["check"]

@@ -7,7 +7,7 @@ const MCSERVICES_AUTH_URL: &str =
     "https://api.minecraftservices.com/authentication/login_with_xbox";
 
 #[derive(Template)]
-#[template(path = "bearer_body.json", escape = "none")]
+#[template(path = "bearer_body.json")]
 struct BearerBodyTemplate<'a> {
     user_hash: &'a str,
     xsts_token: &'a str,

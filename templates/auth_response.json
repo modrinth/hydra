@@ -1,5 +1,0 @@
-{
-    "token": "{{ bearer_token }}",
-    "expires_after": 86400,
-    "flow_done": true
-}

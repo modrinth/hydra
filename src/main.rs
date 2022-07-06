@@ -3,9 +3,11 @@
 #![warn(clippy::nursery)]
 
 mod config;
+mod db;
 mod routes;
 mod stages;
 
+pub(crate) use async_global_executor as executor;
 use std::sync::Arc;
 use trillium::State;
 
@@ -29,30 +31,36 @@ fn init_logger() {
     builder.init();
 }
 
+fn create_handler(config: Arc<config::Config>) -> impl trillium::Handler {
+    (
+        State::new(config),
+        State::new(Arc::new(db::RuntimeState::default())),
+        trillium_head::Head::new(),
+        routes::router(),
+    )
+}
+
 fn main() -> eyre::Result<()> {
     init_logger();
     color_eyre::install()?;
 
     let config = Arc::new(config::Config::init());
     log::info!("Starting Hydra at {}:{}", config.host, config.port);
-    let exec = smol::Executor::new();
 
     #[cfg(feature = "tls")]
-    let get_cert = exec.spawn(async {
-        use smol::{fs, future};
-        log::debug!("Reading TLS certificates");
-
-        future::try_zip(fs::read(&config.cert_file), fs::read(&config.key_file))
-            .await
-            .map_err(|err| eyre::eyre!(
-                "Error loading TLS certificates: {err}. You may need to create them or disable the tls feature."
-            ))
-    });
-
-    let db = exec.spawn(async {
-        log::debug!("Opening database");
+    let get_cert = executor::spawn({
         let config = Arc::clone(&config);
-        smol::unblock(move || sled::Config::from(config.as_ref()).open()).await
+
+        async move {
+            use smol::{fs, future};
+            log::debug!("Reading TLS certificates");
+
+            future::try_zip(fs::read(&config.cert_file), fs::read(&config.key_file))
+                .await
+                .map_err(|err| eyre::eyre!(
+                    "Error loading TLS certificates: {err}. You may need to create them or disable the tls feature."
+                ))
+        }
     });
 
     log::debug!("Loading config");
@@ -61,22 +69,155 @@ fn main() -> eyre::Result<()> {
         .with_host(&config.host);
 
     #[cfg(feature = "tls")]
-    let cfg = smol::block_on(exec.run(async {
+    let cfg = executor::block_on(async {
         log::debug!("Giving certificates to Rustls");
         let (tls_cert, tls_key) = get_cert.await?;
         Ok::<_, eyre::Error>(
             cfg.with_acceptor(RustlsAcceptor::from_pkcs8(&tls_cert, &tls_key)),
         )
-    }))?;
+    })?;
 
-    smol::block_on(exec.run(async {
-        let server = cfg.run_async((
-            State::new(db.await?),
-            trillium_head::Head::new(),
-            routes::router(),
-        ));
+    executor::block_on(async {
+        let server = cfg.run_async(create_handler(Arc::clone(&config)));
         log::info!("Started Hydra!");
         server.await;
         Ok(())
-    }))
+    })
+}
+
+// This test won't work in CI, so it has to be manually enabled. `cargo make test` will run it as well
+#[cfg(feature = "integration-test")]
+#[cfg(test)]
+mod test {
+    use super::*;
+    use eyre::WrapErr;
+    use smol::{net::TcpStream, prelude::*};
+
+    type Error = Box<(dyn std::error::Error + 'static)>;
+
+    #[test]
+    fn test_auth() {
+        init_logger();
+        let config = config::Config::init();
+
+        trillium_testing::with_server(
+            create_handler(Arc::new(config)),
+            |url| async move {
+                log::warn!("This integration test requires user interaction. Log in using the opened page to continue.");
+
+                // Open socket
+                let sock_url = {
+                    let mut url = url.clone();
+                    url.set_scheme("ws").unwrap();
+                    url
+                };
+
+                let sock_addr = format!(
+                    "{}:{}",
+                    url.host_str().unwrap(),
+                    url.port().unwrap()
+                );
+                let ws_conn = TcpStream::connect(sock_addr)
+                    .await
+                    .wrap_err(
+                        "While opening the testing server websocket over TCP",
+                    )
+                    .map_err(Error::from)?;
+                let (mut sock, _) =
+                    async_tungstenite::client_async(sock_url.as_str(), ws_conn)
+                        .await
+                        .wrap_err(
+                            "While attempting to connect to the websocket",
+                        )
+                        .map_err(Error::from)?;
+
+                // Get access code
+                let code = match sock.next().await {
+                    Some(Ok(trillium_websockets::Message::Text(json))) => {
+                        let data =
+                            serde_json::from_str::<serde_json::Value>(&json)
+                                .map_err(Error::from)?;
+
+                        if let Some(err) = data.get("error") {
+                            return Err(Box::from(eyre::eyre!(
+                                "Error getting auth token: {err}"
+                            )));
+                        }
+
+                        let code_raw = data
+                            .get("login_code")
+                            .and_then(|it| it.as_str().map(String::from))
+                            .ok_or(eyre::eyre!(
+                                "Successful response contained no login code!"
+                            ))?;
+                        uuid::Uuid::parse_str(&code_raw)?
+                    }
+                    // `rustfmt` seems very confused here
+                    Some(Err(error)) => {
+                        return Err(Box::from(eyre::eyre!(
+                            "Error receiving code over socket: {error}"
+                        )))
+                    }
+                    Some(Ok(rsp)) => {
+                        return Err(Box::from(eyre::eyre!(
+                        "Received incorrect response type from response: {rsp}",
+                    )))
+                    }
+                    None => {
+                        return Err(Box::from(eyre::eyre!(
+                        "Socket closed before initial response was received!"
+                    )))
+                    }
+                };
+
+                // Run login flow
+                let browser_url = {
+                    let mut url = url.clone();
+                    url.set_path("/login");
+                    url.set_query(Some(&format!("id={code}")));
+                    url
+                };
+                webbrowser::open(browser_url.as_str())?;
+
+                // Validate response
+                let token = match sock.next().await {
+                    Some(Ok(trillium_websockets::Message::Text(json))) => {
+                        let data =
+                            serde_json::from_str::<serde_json::Value>(&json)
+                                .map_err(Error::from)?;
+
+                        if let Some(err) = data.get("error") {
+                            return Err(Box::from(eyre::eyre!(
+                                "Error getting bearer token: {err}"
+                            )));
+                        }
+
+                        data.get("token")
+                            .and_then(|it| it.as_str().map(String::from))
+                            .ok_or(eyre::eyre!(
+                                "Successful response contained no bearer token!"
+                            ))?
+                    }
+                    Some(Err(error)) => {
+                        return Err(Box::from(eyre::eyre!(
+                            "Error receiving token over socket: {error}"
+                        )))
+                    }
+                    Some(Ok(rsp)) => {
+                        return Err(Box::from(eyre::eyre!(
+                        "Received incorrect response type from response: {rsp}",
+                    )))
+                    }
+                    None => {
+                        return Err(Box::from(eyre::eyre!(
+                            "Socket closed before final response was received!"
+                        )))
+                    }
+                };
+
+                log::info!("Successfully fetched bearer token: {token}");
+                Ok(())
+            },
+        )
+    }
 }
