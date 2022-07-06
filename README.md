@@ -29,3 +29,5 @@ If any errors occur, a message of the following form will be sent and the socket
 ```json
 {"error": <ERROR MESSAGE>}
 ```
+
+As a convenience, the APIs provided via `api.minecraftservices.com` can be accessed using the `/services` redirect endpoint.
