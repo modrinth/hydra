@@ -1,0 +1,19 @@
+<!-- Basic HTML template for Hydra -->
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <link rel="stylesheet" href="/style.css"/>
+    <link rel="icon" type="image/png" href="https://modrinth.com/favicon.ico"/>
+    <title>{% block title %}{{ title }} - Hydra{% endblock %}</title>
+  </head>
+
+  <body>
+    <div class="content">
+      <!-- TODO: get SVG locally -->
+      <img src="https://docs.modrinth.com/img/logo.svg" alt="Modrinth Logo" class="logo"/>
+      <br/>
+      {% block content %}{% endblock %}
+    </div>
+  </body>
+</html>

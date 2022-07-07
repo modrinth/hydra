@@ -10,7 +10,7 @@ use trillium_websockets::{websocket, WebSocketConn};
 use uuid::Uuid;
 
 #[derive(Template)]
-#[template(path = "socket_error.json")]
+#[template(path = "messages/error.json")]
 pub struct WebSocketError<'a> {
     reason: &'a str,
 }
@@ -21,7 +21,7 @@ pub(super) fn render_error(reason: &str) -> String {
 }
 
 #[derive(Template)]
-#[template(path = "socket_code.json")]
+#[template(path = "messages/ratelimit_code.json")]
 pub struct WebSocketCode<'a> {
     login_code: &'a str,
 }

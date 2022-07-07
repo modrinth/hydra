@@ -4,6 +4,7 @@
 
 mod config;
 mod db;
+mod pages;
 mod routes;
 mod stages;
 
@@ -37,6 +38,7 @@ fn create_handler(config: Arc<config::Config>) -> impl trillium::Handler {
         State::new(Arc::new(db::RuntimeState::default())),
         trillium_head::Head::new(),
         routes::router(),
+        trillium_static_compiled::static_compiled!("assets/"),
     )
 }
 
@@ -216,6 +218,8 @@ mod test {
                 };
 
                 log::info!("Successfully fetched bearer token: {token}");
+                // Allow page to finish loading
+                smol::Timer::after(std::time::Duration::from_secs(2)).await;
                 Ok(())
             },
         )

@@ -805,6 +805,7 @@ dependencies = [
  "eyre",
  "log",
  "pretty_env_logger",
+ "serde",
  "serde_json",
  "smol",
  "trillium",
@@ -814,6 +815,7 @@ dependencies = [
  "trillium-router",
  "trillium-rustls",
  "trillium-smol",
+ "trillium-static-compiled",
  "trillium-testing",
  "trillium-websockets",
  "url",
@@ -2157,6 +2159,30 @@ dependencies = [
  "trillium",
  "trillium-http",
  "trillium-server-common",
+]
+
+[[package]]
+name = "trillium-static-compiled"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ea8ebd351c0c304c1b3530131df20aac14d3cad1415a29f8083a970acc03f368"
+dependencies = [
+ "httpdate",
+ "log",
+ "mime",
+ "mime_guess",
+ "trillium",
+ "trillium-static-compiled-macros",
+]
+
+[[package]]
+name = "trillium-static-compiled-macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8101a3bcb170938ccf4cf9b79bdd9aab4dc9c8197f128cb42403752cc0ae743a"
+dependencies = [
+ "proc-macro2",
+ "quote",
 ]
 
 [[package]]

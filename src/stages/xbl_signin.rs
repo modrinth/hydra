@@ -6,7 +6,7 @@ use trillium_client as c;
 const XBL_AUTH_URL: &str = "https://user.auth.xboxlive.com/user/authenticate";
 
 #[derive(Template)]
-#[template(path = "xbl_body.json")]
+#[template(path = "bodies/xbl.json")]
 struct XBLBodyTemplate<'a> {
     access_token: &'a str,
 }

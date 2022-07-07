@@ -24,6 +24,7 @@ Next, you will need to open a web browser to the `/login` route with the `id` qu
     "expires": <SECONDS UNTIL EXPIRATION>
 }
 ```
+NOTE: If the user closes the tab without completing the flow, there is no way to detect it. Users should make sure that their apps can handle this case.
 
 If any errors occur, a message of the following form will be sent and the socket will be closed:
 ```json

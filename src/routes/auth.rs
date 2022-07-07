@@ -1,14 +1,14 @@
 //! Main authentication flow for Hydra
-use crate::stages;
+use crate::{pages, stages};
 
 use std::{collections::HashMap, sync::Arc};
-use trillium::{conn_try, Conn, Status};
-use trillium_askama::Template;
+use trillium::{conn_try, Conn, KnownHeaderName, Status};
+use trillium_askama::{AskamaConnExt, Template};
 use trillium_client as c;
 use uuid::Uuid;
 
 #[derive(Template)]
-#[template(path = "socket_response.json")]
+#[template(path = "messages/bearer.json")]
 struct SockResponse<'a> {
     bearer_token: &'a str,
 }
@@ -21,16 +21,22 @@ macro_rules! ws_conn_try {
                 let err = super::socket::render_error(&err.to_string());
                 $ws_conn.send_string(err.clone()).await;
                 trillium::log_error!($ws_conn.close().await);
-                return $conn.with_status($status).with_body(err);
+                return pages::error::Page {
+                    code: &$status,
+                    message: &err,
+                }
+                .render($conn);
             }
         }
     };
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn route(conn: Conn) -> Conn {
     let params = url::form_urlencoded::parse(conn.querystring().as_bytes())
         .collect::<HashMap<_, _>>();
-    let client = c::Client::<crate::Connector>::new().with_default_pool();
+    let client =
+        Arc::new(c::Client::<crate::Connector>::new().with_default_pool());
     let state = conn
         .state::<Arc<crate::db::RuntimeState>>()
         .unwrap()
@@ -46,9 +52,12 @@ pub async fn route(conn: Conn) -> Conn {
     let conn_id = match params.get("state") {
         Some(id) => id.clone().into_owned(),
         None => {
-            return conn
-                .with_status(Status::BadRequest)
-                .with_body("No state sent, are you using the redirect?")
+            return pages::error::Page {
+                code: &Status::BadRequest,
+                message:
+                    "No state sent, you probably are using the wrong route",
+            }
+            .render(conn);
         }
     };
     let mut ws_conn = match Uuid::try_parse(&conn_id)
@@ -56,9 +65,12 @@ pub async fn route(conn: Conn) -> Conn {
         .and_then(|it| state.auth_sockets.get_mut(&it))
     {
         Some(id) => id,
-        None => return conn.with_status(Status::BadRequest).with_body(
-            "Invalid state sent, you probably need to get a new connection id",
-        ),
+        None => return pages::error::Page {
+            code: &Status::BadRequest,
+            message:
+                "Invalid state sent, you probably need to get a new websocket",
+        }
+        .render(conn),
     };
     let ws_conn = ws_conn.value_mut();
 
@@ -100,7 +112,12 @@ pub async fn route(conn: Conn) -> Conn {
                 )))
                 .await;
             trillium::log_error!(ws_conn.close().await);
-            conn.with_status(Status::Forbidden).with_body(err).halt()
+
+            pages::error::Page {
+                code: &Status::Forbidden,
+                message: &err,
+            }
+            .render(conn)
         }
         stages::xsts_token::XSTSResponse::Success { token: xsts_token } => {
             let bearer_token = &conn_try!(
@@ -114,8 +131,29 @@ pub async fn route(conn: Conn) -> Conn {
                 .await;
             trillium::log_error!(ws_conn.close().await);
 
-            // TODO: Response page
-            conn.ok("Done")
+            let player_info = (|| {
+                let client = Arc::clone(&client);
+                async move {
+                    let mut resp = client
+                    .get("https://api.minecraftservices.com/minecraft/profile")
+                    .with_header(
+                        KnownHeaderName::Authorization,
+                        format!("Bearer {}", &bearer_token),
+                    );
+                    resp.send().await.ok()?;
+
+                    serde_json::from_str::<pages::success::PlayerInfo>(
+                        &resp.response_body().read_string().await.ok()?,
+                    )
+                    .ok()
+                }
+            })()
+            .await
+            .unwrap_or_default();
+
+            conn.render(pages::success::Page {
+                name: &player_info.name,
+            })
         }
     }
 }

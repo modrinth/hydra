@@ -7,7 +7,7 @@ use trillium_client as c;
 const OAUTH_TOKEN_URL: &str = "https://login.live.com/oauth20_token.srf";
 
 #[derive(Template)]
-#[template(path = "oauth_token_body")]
+#[template(path = "bodies/oauth_token")]
 struct AccessTokenTemplate<'a> {
     client_id: &'a str,
     client_secret: &'a str,

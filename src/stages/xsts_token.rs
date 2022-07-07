@@ -6,7 +6,7 @@ use trillium_client as c;
 const XSTS_AUTH_URL: &str = "https://xsts.auth.xboxlive.com/xsts/authorize";
 
 #[derive(Template)]
-#[template(path = "xsts_body.json")]
+#[template(path = "bodies/xsts.json")]
 struct XSTSBodyTemplate<'a> {
     user_token: &'a str,
 }

@@ -14,14 +14,17 @@
       fenix = inputs.fenix.packages.${system};
     in {
       devShell = pkgs.mkShell {
-        nativeBuildInputs = [
+        nativeBuildInputs = with pkgs; [
           (with fenix; combine [
             minimal.rustc minimal.cargo
             default.clippy complete.rust-src
             rust-analyzer
           ])
-          pkgs.cargo-make
-          pkgs.act
+          cargo-make
+          act
+
+          nodePackages.vscode-css-languageserver-bin
+          nodePackages.vscode-html-languageserver-bin
         ];
       };
     });

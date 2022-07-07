@@ -1,0 +1,44 @@
+:root {
+    --color-bg: hsl(220, 13%, 10%);
+    --color-fg: hsl(221, 39%, 90%);
+    --color-section-bg: hsl(220, 13%, 19%);
+
+    --content-width: 40%;
+    --content-max-width: 300px;
+    --content-padding: .75em 0em;
+    --logo-width: 80%;
+    --edge-rounding: 1rem;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    color: var(--color-fg);
+    background-color: var(--color-bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.content {
+    background-color: var(--color-section-bg);
+    width: var(--content-width);
+    max-width: var(--content-max-width);
+    padding: var(--content-padding);
+    border-radius: var(--edge-rounding);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.logo {
+    display: block;
+    width: var(--logo-width);
+    margin-left: auto;
+    margin-right: auto;
+}

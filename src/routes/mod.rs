@@ -1,5 +1,6 @@
 //! Routes for Hydra
 use trillium::{conn_unwrap, KnownHeaderName, Status};
+use trillium_askama::AskamaConnExt;
 use trillium_router::{Router, RouterConnExt};
 
 mod auth;
@@ -9,7 +10,7 @@ mod socket;
 pub fn router() -> Router {
     trillium_router::routes!(
         get "/teapot" |conn: trillium::Conn| async move {
-            conn.with_status(Status::ImATeapot).with_body("I'm short and stout!")
+            conn.render(crate::pages::teapot::Page).with_status(Status::ImATeapot)
         },
         all "/services/*" |conn: trillium::Conn| async move {
             let route = conn_unwrap!(conn.wildcard().map(String::from), conn);
@@ -28,6 +29,7 @@ pub fn router() -> Router {
 #[cfg(test)]
 mod test {
     use super::*;
+    use trillium_askama::Template;
     use trillium_testing::prelude::*;
 
     #[test]
@@ -35,7 +37,7 @@ mod test {
         assert_response!(
             get("/teapot").on(&router()),
             Status::ImATeapot,
-            "I'm short and stout!"
+            crate::pages::teapot::Page.render().unwrap()
         );
     }
 
