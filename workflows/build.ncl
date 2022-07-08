@@ -12,7 +12,7 @@ let nix = (fun command args => "nix %{command} -L %{args}") in
     build = {
       runs-on = `ubuntu-latest,
       steps = [
-        { uses = "actions/checkout@2.4" },
+        { uses = "actions/checkout@2" },
         { uses = "cachix/install-nix-action@v17",
           with = {
             extra_nix_config = m%"

@@ -12,7 +12,7 @@ let audited-files = { paths = ["**/Cargo.toml", "**/Cargo.lock"] } in
     audit = {
       runs-on = `ubuntu-latest,
       steps = [
-        { uses = "actions/checkout@v1" },
+        { uses = "actions/checkout@v2" },
         { name = "Cache Toolchain",
           uses = "actions/cache@v3",
           id = `cache,
