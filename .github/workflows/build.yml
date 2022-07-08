@@ -11,15 +11,15 @@ jobs:
         with:
           extra_nix_config: "access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}\ntrusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=\nsubstituters = https://cache.nixos.org/"
       - name: Install Dependencies
-        run: "nix profile install -L nixpkgs#gnutar nixpkgs#pbzip2"
+        run: "nix profile install -L nixpkgs#pbzip2"
       - name: Build Hydra
-        run: nix build -L  && tar -c -Ipbzip2 -f hydra.tar.bz2 ./result
+        run: "nix build -L .#cross-hydra && pbzip2 ./result/bin/hydra -c > hydra.bz2"
       - name: Build Image
         run: "nix build -L .#docker-image && cp result hydra-docker.tar.gz"
       - name: Publish Artifacts
         uses: actions/upload-artifact@v3
         with:
-          path: "hydra.tar.bz2\nhydra-docker.tar.gz"
+          path: "hydra.bz2\nhydra-docker.tar.gz"
 name: Build
 "on":
   pull_request: {}
