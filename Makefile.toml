@@ -23,10 +23,10 @@ RUST_LOG = "info,hydra=trace"
 
 [tasks.release]
 command = "cargo"
-args = ["build", "--release", "--features", "release"]
+args = ["build", "--release"]
 dependencies = ["check"]
 
-[tasks.release-image]
+[tasks.tls-image]
 script_runner = "@duckscript"
 script = '''
 flake = set "(builtins.getFlake \"git+file://\${toString ./.}\")"

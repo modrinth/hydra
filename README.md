@@ -35,10 +35,10 @@ As a convenience, the APIs provided via `api.minecraftservices.com` can be acces
 
 
 ## Deployment
-To deploy Hydra, set the `HYDRA_CLIENT_ID` and `HYDRA_CLIENT_SECRET` environment variables using the values from an Azure application. Then, compile a standard release build using `cargo make release`. If you want to customize the set of enabled features, use `cargo build --release` instead.
+To deploy Hydra, set the `HYDRA_CLIENT_ID` and `HYDRA_CLIENT_SECRET` environment variables using the values from an Azure application. You can build a release version of Hydra with `cargo build --release`, or download one of the artifacts on GitHub Actions. Alternatively, you can use the `.#hydra` and `.#cross-hydra` (builds static GNU/Linux executables using Musl) attributes in Nix.
 
-If using the `tls` feature (enabled by default in `cargo make release`), you will need to either set the `HYDRA_CERT` and `HYDRA_KEY` variables to your TLS certificate and key paths or place them in the `$XDG_CONFIG_DIR/hydra` directory.
+If using the `tls` feature, you will need to either set the `HYDRA_CERT` and `HYDRA_KEY` variables to your TLS certificate and key paths or place them in the `$XDG_CONFIG_DIR/hydra` directory.
 
 Docker images can also be created. In additon to the ones uploaded to GitHub actions, you can use the flake manually should you want to use a customized feature set. To build an image, use the `.#docker-image` flake attribute.
 
-As a convenience, a `cargo make` script is included to build images with the given certificates quickly. Using `cargo make release-image <CERT_PATH> <KEY_PATH>` will create a Docker image with the given TLS certificates installed.
+As a convenience, a `cargo make` script is included to build images with the given certificates quickly. Using `cargo make tls-image <CERT_PATH> <KEY_PATH>` will create a Docker image with the given TLS certificates installed.

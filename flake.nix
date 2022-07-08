@@ -35,7 +35,7 @@
     in rec {
       packages = {
         hydra = pkgs.callPackage (
-          { lib, naersk, target ? system, enableTLS ? true }: naersk.buildPackage {
+          { lib, naersk, target ? system, enableTLS ? false }: naersk.buildPackage {
             root = ./.;
             cargoBuildOptions = old: let
               features = builtins.concatStringsSep " "
@@ -61,9 +61,8 @@
                 enableTLS = certs != null;
               };
             in dockerTools.buildImage {
-              # To not be confused with Nix's Hydra CI
-              name = "hydra-auth";
-              tag = hydra.version;
+              name = "hydra";
+              tag = "latest";
 
               config = {
                 Cmd = [ "${hydra'}/bin/hydra" ];

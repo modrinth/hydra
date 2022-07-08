@@ -10,13 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          key: "${{ runner.os }}-nix-${{ hashFiles('./flake.lock', './flake.nix') }}"
+          path: "/nix/store\n/nix/var/nix/db/db.sqlite\n/nix/var/nix/profiles/per-user/${{ env.USER }}/profile/bin\n/nix/var/nix/profiles/default/bin\n/nix/var/nix/profiles/per-user/root/channels"
       - uses: cachix/install-nix-action@v17
         with:
           extra_nix_config: "access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}\ntrusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=\nsubstituters = https://cache.nixos.org/"
-      - name: Cache Results
-        uses: mtoohey31/cache-flake-attrs@v2
-        with:
-          key: "${{ runner.os }}-nix-${{ hashFiles('./flake.lock', './flake.nix') }}"
       - name: Install Dependencies
         run: "nix profile install -L nixpkgs#pbzip2"
       - name: Build Hydra
@@ -26,11 +27,11 @@ jobs:
         with:
           path: hydra.bz2
       - name: Build Image
-        run: "nix build -L .#docker-image && cp result hydra-docker.tar.gz"
+        run: "nix build -L .#docker-image"
       - name: Login to Registry
         run: "echo \"${{ secrets.GITHUB_TOKEN }}\" | docker login ghcr.io -u $ --password-stdin"
       - name: Publish Image
-        run: "IMAGE_ID=\"$(echo \"ghcr.io/${{ github.repository_owner }}/${{ github.repository }}\" | tr '[A-Z]' '[a-z]')\"\nVERSION=\"$(echo \"${{ github.ref_name }}\" | sed -e 's/^v//')\"\ndocker tag '${{ github.repository }}' \"$IMAGE_ID:$VERSION\"\ndocker push \"$IMAGE_ID:$VERSION\""
+        run: "IMAGE_ID=\"$(echo 'ghcr.io/${{ github.repository_owner }}/hydra'| tr '[A-Z]' '[a-z]')\"\nVERSION_TRIMMED=\"$(echo ${{ github.ref_name }} | sed 's/^v//')\"\ndocker load < ./result\ndocker tag hydra $IMAGE_ID:$VERSION_TRIMMED\ndocker push $IMAGE_ID:$VERSION_TRIMMED"
 name: Build
 "on":
   pull_request: {}

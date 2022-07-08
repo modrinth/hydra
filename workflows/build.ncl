@@ -1,8 +1,8 @@
 let nix = (fun command args => "nix %{command} -L %{args}") in
 let registry = "ghcr.io" in
 let username = "${{ github.repository_owner }}" in
-let repo_name = "${{ github.repository }}" in
 let version = "${{ github.ref_name }}" in
+let image_name = "hydra" in
 {
   name = "Build",
   on = {
@@ -23,18 +23,25 @@ let version = "${{ github.ref_name }}" in
       },
       steps = [
         { uses = "actions/checkout@v2" },
+        { name = "Cache",
+          uses = "actions/cache@v3",
+          with = {
+            path = m%"
+              /nix/store
+              /nix/var/nix/db/db.sqlite
+              /nix/var/nix/profiles/per-user/${{ env.USER }}/profile/bin
+              /nix/var/nix/profiles/default/bin
+              /nix/var/nix/profiles/per-user/root/channels
+            "%m,
+            key = "${{ runner.os }}-nix-${{ hashFiles('./flake.lock', './flake.nix') }}",
+          },
+        },
         { uses = "cachix/install-nix-action@v17",
           with = {
             extra_nix_config = m%"
               access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
               trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
               substituters = https://cache.nixos.org/"%m,
-          },
-        },
-        { name = "Cache Results",
-          uses = "mtoohey31/cache-flake-attrs@v2",
-          with = {
-            key = "${{ runner.os }}-nix-${{ hashFiles('./flake.lock', './flake.nix') }}",
           },
         },
         { name = "Install Dependencies",
@@ -52,17 +59,18 @@ let version = "${{ github.ref_name }}" in
         },
 
         { name = "Build Image",
-          run = (nix "build" ".#docker-image") ++ " && cp result hydra-docker.tar.gz",
+          run = (nix "build" ".#docker-image"),
         },
         { name = "Login to Registry",
           run = "echo \"${{ secrets.GITHUB_TOKEN }}\" | docker login ghcr.io -u $ --password-stdin",
         },
         { name = "Publish Image",
           run = m%"
-            IMAGE_ID="$(echo "%{registry}/%{username}/%{repo_name}" | tr '[A-Z]' '[a-z]')"
-            VERSION="$(echo "%{version}" | sed -e 's/^v//')"
-            docker tag '%{repo_name}' "$IMAGE_ID:$VERSION"
-            docker push "$IMAGE_ID:$VERSION"
+            IMAGE_ID="$(echo '%{registry}/%{username}/%{image_name}'| tr '[A-Z]' '[a-z]')"
+            VERSION_TRIMMED="$(echo %{version} | sed 's/^v//')"
+            docker load < ./result
+            docker tag %{image_name} $IMAGE_ID:$VERSION_TRIMMED
+            docker push $IMAGE_ID:$VERSION_TRIMMED
          "%m,
          }
       ]
