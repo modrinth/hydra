@@ -13,59 +13,72 @@
 
   outputs = inputs @ {self, ...}:
     inputs.utils.lib.eachDefaultSystem (system: let
+      container-system = "x86_64-unknown-linux-musl";
       pkgs = import inputs.nixpkgs {inherit system;};
       fenix = inputs.fenix.packages.${system};
+
       toolchain = with fenix; combine [
         minimal.rustc
         minimal.cargo
       ];
+      toolchain-cross = with fenix; combine [
+        toolchain
+        targets."${container-system}".latest.rust-std
+      ];
 
-      naersk = inputs.naersk.lib."${system}".override {
+      mkNaerskFor = toolchain: inputs.naersk.lib."${system}".override {
         cargo = toolchain;
         rustc = toolchain;
       };
+      naersk = mkNaerskFor toolchain;
+      naersk-cross = mkNaerskFor toolchain-cross;
     in rec {
       packages = {
         hydra = pkgs.callPackage (
-          { lib, enableTLS ? true }: naersk.buildPackage {
+          { lib, naersk, target ? system, enableTLS ? true }: naersk.buildPackage {
             root = ./.;
             cargoBuildOptions = old: let
               features = builtins.concatStringsSep " "
                 ([] ++ lib.optional enableTLS "tls");
             in old ++ ["--features" "\"${features}\""];
             doCheck = true;
-          }) {  };
-        # TODO: Set up with cross toolchain to build on OSX
+          }) { inherit naersk; };
+        cross-hydra = (packages.hydra.override { naersk = naersk-cross;}).overrideAttrs
+          (old: old // {
+            CARGO_BUILD_TARGET = container-system;
+            CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER =
+              "${pkgs.pkgsCross.musl64.stdenv.cc}/bin/${container-system}-gcc";
+          });
         docker-image = pkgs.callPackage (
-          { lib
-          , dockerTools
-          , stdenv
-          , copyPathsToStore
-          , hydra ? packages.hydra
-          , certs ? null # A set containing the cert.pem and key.pem file paths
-          }: let
-            hydra' = hydra.override {
-              enableTLS = certs != null;
-            };
-          in dockerTools.buildImage {
-            # To not be confused with Nix's Hydra CI
-            name = "hydra-auth";
-            tag = hydra.version;
-
-            config = {
-              Cmd = [ "${hydra'}/bin/hydra" ];
-              ExposedPorts = {
-                "8080/tcp" = {};
+            { lib
+            , dockerTools
+            , stdenv
+            , copyPathsToStore
+            , hydra ? packages.cross-hydra
+            , certs ? null # A set containing the cert.pem and key.pem file paths
+            }: let
+              hydra' = hydra.override {
+                enableTLS = certs != null;
               };
-              Env = [
-                "HYDRA_HOST=0.0.0.0"
-                "HYDRA_PORT=8080"
-              ] ++ lib.optionals (certs != null) [
-                "HYDRA_CERT=${certs.cert}"
-                "HYDRA_KEY=${certs.key}"
-              ];
-            };
-          }) {};
+            in dockerTools.buildImage {
+              # To not be confused with Nix's Hydra CI
+              name = "hydra-auth";
+              tag = hydra.version;
+
+              config = {
+                Cmd = [ "${hydra'}/bin/hydra" ];
+                ExposedPorts = {
+                  "8080/tcp" = {};
+                };
+                Env = [
+                  "HYDRA_HOST=0.0.0.0"
+                  "HYDRA_PORT=8080"
+                ] ++ lib.optionals (certs != null) [
+                  "HYDRA_CERT=${certs.cert}"
+                  "HYDRA_KEY=${certs.key}"
+                ];
+              };
+            }) {};
       };
       defaultPackage = packages.hydra;
 
