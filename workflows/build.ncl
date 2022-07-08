@@ -1,4 +1,8 @@
 let nix = (fun command args => "nix %{command} -L %{args}") in
+let registry = "ghcr.io" in
+let username = "${{ github.repository_owner }}" in
+let repo_name = "${{ github.repository }}" in
+let version = "${{ github.ref_name }}" in
 {
   name = "Build",
   on = {
@@ -13,6 +17,10 @@ let nix = (fun command args => "nix %{command} -L %{args}") in
   jobs = {
     build = {
       runs-on = `ubuntu-latest,
+      permissions = {
+        contents = `read,
+        packages = `write,
+      },
       steps = [
         { uses = "actions/checkout@v2" },
         { uses = "cachix/install-nix-action@v17",
@@ -23,24 +31,40 @@ let nix = (fun command args => "nix %{command} -L %{args}") in
               substituters = https://cache.nixos.org/"%m,
           },
         },
+        { name = "Cache Results",
+          uses = "mtoohey31/cache-flake-attrs@v2",
+          with = {
+            key = "${{ runner.os }}-nix-${{ hashFiles('./flake.lock', './flake.nix') }}",
+          },
+        },
         { name = "Install Dependencies",
           run = nix "profile install" "nixpkgs#pbzip2",
         },
+
         { name = "Build Hydra",
           run = (nix "build" ".#cross-hydra") ++ " && pbzip2 ./result/bin/hydra -c > hydra.bz2",
         },
+        { name = "Publish Artifact",
+          uses = "actions/upload-artifact@v3",
+          with = {
+            path = "hydra.bz2"
+          },
+        },
+
         { name = "Build Image",
           run = (nix "build" ".#docker-image") ++ " && cp result hydra-docker.tar.gz",
         },
-        { name = "Publish Artifacts",
-          uses = "actions/upload-artifact@v3",
-          with = {
-            path = m%"
-              hydra.bz2
-              hydra-docker.tar.gz
-            "%m
-          },
-        }
+        { name = "Login to Registry",
+          run = "echo \"${{ secrets.GITHUB_TOKEN }}\" | docker login ghcr.io -u $ --password-stdin",
+        },
+        { name = "Publish Image",
+          run = m%"
+            IMAGE_ID="$(echo "%{registry}/%{username}/%{repo_name}" | tr '[A-Z]' '[a-z]')"
+            VERSION="$(echo "%{version}" | sed -e 's/^v//')"
+            docker tag '%{repo_name}' "$IMAGE_ID:$VERSION"
+            docker push "$IMAGE_ID:$VERSION"
+         "%m,
+         }
       ]
     }
   }
