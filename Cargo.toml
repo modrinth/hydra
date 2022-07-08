@@ -24,7 +24,7 @@ pretty_env_logger = "0.4"
 
 async-global-executor = "2.2"
 smol = "1.2"
-trillium = "0.2"
+trillium = "0.2.3"
 trillium-askama = "0.3"
 trillium-client = "0.2"
 trillium-head = "0.2"
@@ -32,7 +32,7 @@ trillium-router = "0.3"
 trillium-rustls = "0.1"
 trillium-smol = "0.2"
 trillium-static-compiled = "0.5"
-trillium-websockets = "0.5"
+trillium-websockets = "0.5.1"
 
 [dev-dependencies]
 trillium-testing = {version = "0.4", features = ["smol"]}

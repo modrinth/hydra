@@ -4,7 +4,6 @@ use crate::{
     db::{RuntimeState, UserID},
 };
 use std::{sync::Arc, time::Instant};
-use trillium::{conn_unwrap, Conn};
 use trillium_askama::Template;
 use trillium_websockets::{websocket, WebSocketConn};
 use uuid::Uuid;
@@ -26,19 +25,14 @@ pub struct WebSocketCode<'a> {
     login_code: &'a str,
 }
 
+#[inline]
 pub fn route() -> impl trillium::Handler {
-    (attach_ip, websocket(sock))
-}
-
-#[allow(clippy::unused_async)]
-pub async fn attach_ip(conn: Conn) -> Conn {
-    let ip = conn_unwrap!(conn.inner().peer_ip(), conn);
-    conn.with_state(ip)
+    websocket(sock)
 }
 
 pub async fn sock(mut conn: WebSocketConn) {
-    let addr = if let Some(addr) = conn.state::<std::net::IpAddr>() {
-        *addr
+    let addr = if let Some(addr) = conn.peer_ip() {
+        addr
     } else {
         conn.send_string(render_error(
             "Could not determine IP address of connector!",
