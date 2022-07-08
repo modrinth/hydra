@@ -25,7 +25,7 @@ let nix = (fun command args => "nix %{command} -L %{args}") in
           run = nix "profile install" "nixpkgs#pbzip2",
         },
         { name = "Build Hydra",
-          run = (nix "build" "") ++ " && pbzip2 ./result/bin/hydra -c > hydra.bz2",
+          run = (nix "build" ".#cross-hydra") ++ " && pbzip2 ./result/bin/hydra -c > hydra.bz2",
         },
         { name = "Build Image",
           run = (nix "build" ".#docker-image") ++ " && cp result hydra-docker.tar.gz",
