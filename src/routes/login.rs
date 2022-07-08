@@ -12,6 +12,10 @@ pub async fn route(conn: Conn) -> Conn {
             .and_then(HeaderValue::as_str)
             .map_or_else(|| String::from("???"), String::from)
     );
+    let config = conn
+        .state::<std::sync::Arc<crate::config::Config>>()
+        .unwrap()
+        .clone();
 
     let query = url::form_urlencoded::parse(conn.querystring().as_bytes())
         .collect::<HashMap<_, _>>();
@@ -34,7 +38,7 @@ pub async fn route(conn: Conn) -> Conn {
         }
     };
 
-    let url = match login_redirect::get_url(host, conn_id) {
+    let url = match login_redirect::get_url(host, conn_id, &config.client_id) {
         Ok(url) => url,
         Err(err) => {
             return pages::error::Page {
@@ -48,15 +52,4 @@ pub async fn route(conn: Conn) -> Conn {
     log::trace!("GET {url}");
     conn.with_status(Status::SeeOther)
         .with_header(KnownHeaderName::Location, url)
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use trillium_testing::prelude::*;
-
-    #[test]
-    fn test_no_host() {
-        assert_response!(get("/").on(&route), Status::BadRequest);
-    }
 }

@@ -1,5 +1,4 @@
 //! Get access token from code
-use crate::config;
 use trillium::KnownHeaderName;
 use trillium_askama::Template;
 use trillium_client as c;
@@ -19,10 +18,12 @@ pub async fn fetch_token(
     client: &c::Client<crate::Connector>,
     host: &str,
     code: &str,
+    client_id: &str,
+    client_secret: &str,
 ) -> eyre::Result<String> {
     let body = AccessTokenTemplate {
-        client_id: config::CLIENT_ID,
-        client_secret: config::CLIENT_SECRET,
+        client_id,
+        client_secret,
         auth_code: code,
         redirect_uri: &super::get_redirect_url(host),
     }

@@ -41,6 +41,7 @@ pub async fn route(conn: Conn) -> Conn {
         .state::<Arc<crate::db::RuntimeState>>()
         .unwrap()
         .clone();
+    let config = conn.state::<Arc<crate::config::Config>>().unwrap().clone();
 
     let code = conn_try!(
         params
@@ -85,7 +86,13 @@ pub async fn route(conn: Conn) -> Conn {
     log::info!("Signing in with code {code}");
     let access_token = ws_conn_try!(
         Status::InternalServerError,
-        stages::access_token::fetch_token(&client, host, code).await
+        stages::access_token::fetch_token(
+            &client,
+            host,
+            code,
+            &config.client_id,
+            &config.client_secret,
+        ).await
         => conn, ws_conn
     );
 

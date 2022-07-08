@@ -1,5 +1,4 @@
 //! Login redirect step
-use crate::config;
 use trillium_askama::Template;
 
 #[derive(Template)]
@@ -10,9 +9,13 @@ struct LoginTemplate<'a> {
     conn_id: &'a str,
 }
 
-pub fn get_url(host: &str, conn_id: &str) -> eyre::Result<String> {
+pub fn get_url(
+    host: &str,
+    conn_id: &str,
+    client_id: &str,
+) -> eyre::Result<String> {
     let data = LoginTemplate {
-        client_id: config::CLIENT_ID,
+        client_id,
         redirect_uri: &super::get_redirect_url(host),
         conn_id,
     };

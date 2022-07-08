@@ -3,14 +3,12 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-// TODO: we may want to encrypt one or both of these at compile time
-pub const CLIENT_ID: &str = env!("HYDRA_CLIENT_ID");
-pub const CLIENT_SECRET: &str = env!("HYDRA_CLIENT_SECRET");
-
 #[derive(Debug)]
 pub struct Config {
     pub port: u16,
     pub host: String,
+    pub client_id: String,
+    pub client_secret: String,
     pub rate_limit: u8,
     pub rate_limit_expires: Duration,
     #[cfg(feature = "tls")]
@@ -20,11 +18,11 @@ pub struct Config {
 }
 
 macro_rules! config_option {
-    (env $env:literal $(=> $transform:expr)?, default $default:expr) => {
+    (env $env:literal $(=> $transform:expr)?$(, default $default:expr)?) => {
         std::env::var(String::from($env))
             .ok()
             $(.and_then($transform))?
-            .unwrap_or($default)
+            $(.unwrap_or($default))?
     }
 }
 
@@ -39,6 +37,16 @@ impl Config {
             env "HYDRA_HOST",
             default String::from("127.0.0.1")
         );
+
+        let client_id = config_option!(
+            env "HYDRA_CLIENT_ID"
+        )
+        .expect("Could not find Hydra client ID!");
+
+        let client_secret = config_option!(
+            env "HYDRA_CLIENT_SECRET"
+        )
+        .expect("Could not find Hydra client secret!");
 
         let rate_limit = config_option!(
             env "HYDRA_RATE_LIMIT" => |it| it.parse::<u8>().ok(),
@@ -72,6 +80,8 @@ impl Config {
         Self {
             port,
             host,
+            client_id,
+            client_secret,
             rate_limit,
             rate_limit_expires,
             #[cfg(feature = "tls")]
