@@ -24,7 +24,8 @@ let toolchain = {
             path = m%"
               ~/.rustup
               ~/.cargo
-            "%m
+            "%m,
+            key = "${{ runner.os }}-lint-toolchain",
           },
         },
         { name = "Install toolchain",

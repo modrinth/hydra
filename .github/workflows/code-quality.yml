@@ -11,6 +11,7 @@ jobs:
         name: Cache Toolchain
         uses: actions/cache@v3
         with:
+          key: "${{ runner.os }}-lint-toolchain"
           path: "~/.rustup\n~/.cargo"
       - if: "${{ steps.cache.outputs.cache-hit == 'false' }}"
         name: Install toolchain

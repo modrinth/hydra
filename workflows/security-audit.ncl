@@ -20,7 +20,8 @@ let audited-files = { paths = ["**/Cargo.toml", "**/Cargo.lock"] } in
             path = m%"
               ~/.rustup
               ~/.cargo
-            "%m
+            "%m,
+            key = "${{ runner.os }}-audit-toolchain",
           },
         },
         { name = "Install Toolchain",
