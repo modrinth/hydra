@@ -22,10 +22,10 @@ let nix = (fun command args => "nix %{command} -L %{args}") in
           },
         },
         { name = "Install Dependencies",
-          run = nix "profile install" "nixpkgs#gnutar nixpkgs#pbzip2",
+          run = nix "profile install" "nixpkgs#pbzip2",
         },
         { name = "Build Hydra",
-          run = (nix "build" "") ++ " && tar -c -Ipbzip2 -f hydra.tar.bz2 ./result",
+          run = (nix "build" "") ++ " && pbzip2 ./result/bin/hydra -c > hydra.bz2",
         },
         { name = "Build Image",
           run = (nix "build" ".#docker-image") ++ " && cp result hydra-docker.tar.gz",
@@ -34,7 +34,7 @@ let nix = (fun command args => "nix %{command} -L %{args}") in
           uses = "actions/upload-artifact@v3",
           with = {
             path = m%"
-              hydra.tar.bz2
+              hydra.bz2
               hydra-docker.tar.gz
             "%m
           },
