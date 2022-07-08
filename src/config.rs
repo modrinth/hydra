@@ -66,15 +66,15 @@ impl Config {
             directories::ProjectDirs::from("com", "Modrinth", "Hydra").unwrap();
 
         #[cfg(feature = "tls")]
-        let cert_file = config_option!(
-            env "HYDRA_CERT" => |it| Some(PathBuf::from(it)),
-            default dirs.config_dir().join("cert.pem")
-        );
-
-        #[cfg(feature = "tls")]
-        let key_file = config_option!(
-            env "HYDRA_KEY" => |it| Some(PathBuf::from(it)),
-            default dirs.config_dir().join("key.pem")
+        let (cert_file, key_file) = (
+            config_option!(
+                env "HYDRA_CERT" => |it| Some(PathBuf::from(it)),
+                default dirs.config_dir().join("cert.pem")
+            ),
+            config_option!(
+                env "HYDRA_KEY" => |it| Some(PathBuf::from(it)),
+                default dirs.config_dir().join("key.pem")
+            ),
         );
 
         Self {

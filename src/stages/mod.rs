@@ -8,10 +8,13 @@ pub mod xsts_token;
 
 #[inline]
 pub(self) fn get_redirect_url(host: &str) -> String {
-    let prefix = if host.starts_with("localhost") {
-        "http"
-    } else {
-        "https"
+    #[cfg(not(feature = "tls"))]
+    let method = match host.starts_with("localhost") {
+        true => "http",
+        false => "https",
     };
-    format!("{prefix}://{host}/auth-redirect")
+    #[cfg(feature = "tls")]
+    let method = "https";
+
+    format!("{method}://{host}/auth-redirect")
 }
