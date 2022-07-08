@@ -4,14 +4,13 @@
 <html lang="en">
   <head>
     <link rel="stylesheet" href="/style.css"/>
-    <link rel="icon" type="image/png" href="https://modrinth.com/favicon.ico"/>
+    <link rel="icon" type="image/png" href="/favicon.ico"/>
     <title>{% block title %}{{ title }}{% endblock %} - Hydra</title>
   </head>
 
   <body>
     <div class="content">
-      <!-- TODO: get SVG locally -->
-      <img src="https://docs.modrinth.com/img/logo.svg" alt="Modrinth Logo" class="logo"/>
+      <img src="/logo.svg" alt="Modrinth Logo" class="logo"/>
       <br/>
       {% block content %}{% endblock %}
     </div>

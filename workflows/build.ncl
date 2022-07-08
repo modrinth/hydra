@@ -2,7 +2,10 @@ let nix = (fun command args => "nix %{command} -L %{args}") in
 {
   name = "Build",
   on = {
-     push = { branches = [ `master ] },
+     push = {
+         branches = [ `master ],
+         tags = [ "**" ]
+     },
      pull_request = {},
   },
   env = {
