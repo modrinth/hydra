@@ -1,5 +1,5 @@
 # Hydra - Minecraft Microsoft Authentication Flow
-![GitHub branch checks state](https://img.shields.io/github/checks-status/modrinth/hydra/master)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/modrinth/hydra/Code%20Quality)
 ![GitHub license](https://img.shields.io/github/license/modrinth/hydra)
 ![Discord](https://img.shields.io/discord/734077874708938864)
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/modrinth/hydra)
