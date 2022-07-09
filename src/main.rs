@@ -88,7 +88,7 @@ fn main() -> eyre::Result<()> {
 }
 
 // This test won't work in CI, so it has to be manually enabled. `cargo make test` will run it as well
-//#[cfg(feature = "integration-test")]
+#[cfg(feature = "integration-test")]
 #[cfg(test)]
 mod test {
     use super::*;
