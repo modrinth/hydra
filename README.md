@@ -35,7 +35,7 @@ As a convenience, the APIs provided via `api.minecraftservices.com` can be acces
 
 
 ## Deployment
-To deploy Hydra, set the `HYDRA_CLIENT_ID` and `HYDRA_CLIENT_SECRET` environment variables using the values from an Azure application. You can build a release version of Hydra with `cargo build --release`, or download one of the artifacts on GitHub Actions. Alternatively, you can use the `.#hydra` and `.#cross-hydra` (builds static GNU/Linux executables using Musl) attributes in Nix. The local hostname uses the `HYDRA_HOST` and `HYDRA_PORT` variables, with the public hostname being stored in the `PUBLIC_URL` variable.
+To deploy Hydra, set the `HYDRA_CLIENT_ID` and `HYDRA_CLIENT_SECRET` environment variables using the values from an Azure application. You can build a release version of Hydra with `cargo build --release`, or download one of the artifacts on GitHub Actions. Alternatively, you can use the `.#hydra` and `.#cross-hydra` (builds static GNU/Linux executables using Musl) attributes in Nix. The local hostname uses the `HYDRA_HOST` and `HYDRA_PORT` variables, with the public hostname being stored in the `HYDRA_PUBLIC_URL` variable.
 
 If using the `tls` feature, you will need to either set the `HYDRA_CERT` and `HYDRA_KEY` variables to your TLS certificate and key paths or place them in the `$XDG_CONFIG_DIR/hydra` directory.
 
