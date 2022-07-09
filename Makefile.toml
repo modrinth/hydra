@@ -13,6 +13,9 @@ command = "cargo"
 args = ["test", "--features", "integration-test"]
 dependencies = ["check"]
 
+[tasks.test.env]
+HYDRA_PUBLIC_URL="http://localhost:8080/"
+
 [tasks.run]
 command = "cargo"
 args = ["run"]
@@ -20,6 +23,7 @@ args = ["run"]
 [tasks.run.env]
 RUST_BACKTRACE = 1
 RUST_LOG = "info,hydra=trace"
+HYDRA_PUBLIC_URL="http://localhost:8080/"
 
 [tasks.release]
 command = "cargo"

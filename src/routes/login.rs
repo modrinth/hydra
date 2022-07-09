@@ -27,18 +27,11 @@ pub async fn route(conn: Conn) -> Conn {
         }.render(conn)
     };
 
-    let host = match conn.inner().host() {
-        Some(host) => host,
-        None => {
-            return pages::error::Page {
-                code: &Status::InternalServerError,
-                message: "Server cannot determine the MSA redirect hostname.",
-            }
-            .render(conn)
-        }
-    };
-
-    let url = match login_redirect::get_url(host, conn_id, &config.client_id) {
+    let url = match login_redirect::get_url(
+        &config.public_url,
+        conn_id,
+        &config.client_id,
+    ) {
         Ok(url) => url,
         Err(err) => {
             return pages::error::Page {

@@ -75,20 +75,13 @@ pub async fn route(conn: Conn) -> Conn {
     };
     let ws_conn = ws_conn.value_mut();
 
-    let host = ws_conn_try!(
-        Status::InternalServerError,
-        conn.inner().host().ok_or(eyre::eyre!(
-            "Tried to use authentication route when own hostname is unknown!"
-        )) => conn, ws_conn
-    );
-
     // TODO: integrate sock
     log::info!("Signing in with code {code}");
     let access_token = ws_conn_try!(
         Status::InternalServerError,
         stages::access_token::fetch_token(
             &client,
-            host,
+            &config.public_url,
             code,
             &config.client_id,
             &config.client_secret,

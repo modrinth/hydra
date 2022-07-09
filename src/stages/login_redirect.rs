@@ -10,14 +10,17 @@ struct LoginTemplate<'a> {
 }
 
 pub fn get_url(
-    host: &str,
+    public_uri: &url::Url,
     conn_id: &str,
     client_id: &str,
 ) -> eyre::Result<String> {
-    let data = LoginTemplate {
+    LoginTemplate {
         client_id,
-        redirect_uri: &super::get_redirect_url(host),
+        redirect_uri: public_uri
+            .join(super::access_token::ROUTE_NAME)?
+            .as_str(),
         conn_id,
-    };
-    Ok(data.render()?)
+    }
+    .render()
+    .map_err(eyre::Error::from)
 }

@@ -2,11 +2,13 @@
 #[allow(unused)]
 use std::path::PathBuf;
 use std::time::Duration;
+use url::Url;
 
 #[derive(Debug)]
 pub struct Config {
     pub port: u16,
     pub host: String,
+    pub public_url: Url,
     pub client_id: String,
     pub client_secret: String,
     pub rate_limit: u8,
@@ -22,7 +24,7 @@ macro_rules! config_option {
         std::env::var(String::from($env))
             .ok()
             $(.and_then($transform))?
-            $(.unwrap_or($default))?
+            $(.unwrap_or_else(|| $default))?
     }
 }
 
@@ -36,6 +38,11 @@ impl Config {
         let host = config_option!(
             env "HYDRA_HOST",
             default String::from("127.0.0.1")
+        );
+
+        let public_url = config_option!(
+            env "HYDRA_PUBLIC_URL" => |it| Url::parse(&it).ok(),
+            default Url::parse("https://{host}:{port}/").unwrap()
         );
 
         let client_id = config_option!(
@@ -80,6 +87,7 @@ impl Config {
         Self {
             port,
             host,
+            public_url,
             client_id,
             client_secret,
             rate_limit,

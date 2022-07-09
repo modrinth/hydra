@@ -4,6 +4,7 @@ use trillium_askama::Template;
 use trillium_client as c;
 
 const OAUTH_TOKEN_URL: &str = "https://login.live.com/oauth20_token.srf";
+pub const ROUTE_NAME: &str = "/auth-redirect";
 
 #[derive(Template)]
 #[template(path = "bodies/oauth_token")]
@@ -16,7 +17,7 @@ struct AccessTokenTemplate<'a> {
 
 pub async fn fetch_token(
     client: &c::Client<crate::Connector>,
-    host: &str,
+    public_uri: &url::Url,
     code: &str,
     client_id: &str,
     client_secret: &str,
@@ -25,7 +26,7 @@ pub async fn fetch_token(
         client_id,
         client_secret,
         auth_code: code,
-        redirect_uri: &super::get_redirect_url(host),
+        redirect_uri: public_uri.join(ROUTE_NAME)?.as_str(),
     }
     .render()?;
 

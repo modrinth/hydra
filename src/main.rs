@@ -88,140 +88,124 @@ fn main() -> eyre::Result<()> {
 }
 
 // This test won't work in CI, so it has to be manually enabled. `cargo make test` will run it as well
-#[cfg(feature = "integration-test")]
+//#[cfg(feature = "integration-test")]
 #[cfg(test)]
 mod test {
     use super::*;
     use eyre::WrapErr;
     use smol::{net::TcpStream, prelude::*};
 
-    type Error = Box<(dyn std::error::Error + 'static)>;
-
     #[test]
-    fn test_auth() {
+    fn test_auth() -> eyre::Result<()> {
         init_logger();
         let config = config::Config::init();
+        let url = config.public_url.clone();
 
-        trillium_testing::with_server(
-            create_handler(Arc::new(config)),
-            |url| async move {
-                log::warn!("This integration test requires user interaction. Log in using the opened page to continue.");
+        let server = async_global_executor::spawn(
+            trillium_smol::config()
+                .with_port(config.port)
+                .with_host(&config.host)
+                .run_async(create_handler(Arc::new(config))),
+        );
 
-                // Open socket
-                let sock_url = {
-                    let mut url = url.clone();
-                    url.set_scheme("ws").unwrap();
-                    url
-                };
+        trillium_testing::block_on(async {
+            log::warn!("This integration test requires user interaction. Log in using the opened page to continue.");
 
-                let sock_addr = format!(
-                    "{}:{}",
-                    url.host_str().unwrap(),
-                    url.port().unwrap()
-                );
-                let ws_conn = TcpStream::connect(sock_addr)
+            // Open socket
+            let sock_url = {
+                let mut url = url.clone();
+                url.set_scheme("ws").unwrap();
+                url
+            };
+
+            let sock_addr =
+                format!("{}:{}", url.host_str().unwrap(), url.port().unwrap());
+            let ws_conn = TcpStream::connect(sock_addr).await.wrap_err(
+                "While opening the testing server websocket over TCP",
+            )?;
+            let (mut sock, _) =
+                async_tungstenite::client_async(sock_url.as_str(), ws_conn)
                     .await
-                    .wrap_err(
-                        "While opening the testing server websocket over TCP",
-                    )
-                    .map_err(Error::from)?;
-                let (mut sock, _) =
-                    async_tungstenite::client_async(sock_url.as_str(), ws_conn)
-                        .await
-                        .wrap_err(
-                            "While attempting to connect to the websocket",
-                        )
-                        .map_err(Error::from)?;
+                    .wrap_err("While attempting to connect to the websocket")?;
 
-                // Get access code
-                let code = match sock.next().await {
-                    Some(Ok(trillium_websockets::Message::Text(json))) => {
-                        let data =
-                            serde_json::from_str::<serde_json::Value>(&json)
-                                .map_err(Error::from)?;
+            // Get access code
+            let code = match sock.next().await {
+                Some(Ok(trillium_websockets::Message::Text(json))) => {
+                    let data =
+                        serde_json::from_str::<serde_json::Value>(&json)?;
 
-                        if let Some(err) = data.get("error") {
-                            return Err(Box::from(eyre::eyre!(
-                                "Error getting auth token: {err}"
-                            )));
-                        }
+                    if let Some(err) = data.get("error") {
+                        eyre::bail!("Error getting auth token: {err}")
+                    }
 
-                        let code_raw = data
-                            .get("login_code")
-                            .and_then(|it| it.as_str().map(String::from))
-                            .ok_or(eyre::eyre!(
-                                "Successful response contained no login code!"
-                            ))?;
-                        uuid::Uuid::parse_str(&code_raw)?
-                    }
-                    // `rustfmt` seems very confused here
-                    Some(Err(error)) => {
-                        return Err(Box::from(eyre::eyre!(
-                            "Error receiving code over socket: {error}"
-                        )))
-                    }
-                    Some(Ok(rsp)) => {
-                        return Err(Box::from(eyre::eyre!(
-                        "Received incorrect response type from response: {rsp}",
-                    )))
-                    }
-                    None => {
-                        return Err(Box::from(eyre::eyre!(
+                    let code_raw = data
+                        .get("login_code")
+                        .and_then(|it| it.as_str().map(String::from))
+                        .ok_or(eyre::eyre!(
+                            "Successful response contained no login code!"
+                        ))?;
+                    uuid::Uuid::parse_str(&code_raw)?
+                }
+                // `rustfmt` seems very confused here
+                Some(Err(error)) => {
+                    eyre::bail!("Error receiving code over socket: {error}")
+                }
+                Some(Ok(rsp)) => eyre::bail!(
+                    "Received incorrect response type from response: {rsp}",
+                ),
+
+                None => {
+                    eyre::bail!(
                         "Socket closed before initial response was received!"
-                    )))
+                    )
+                }
+            };
+
+            // Run login flow
+            let browser_url = {
+                let mut url = url.clone();
+                url.set_path("/login");
+                url.set_query(Some(&format!("id={code}")));
+                url
+            };
+            webbrowser::open(browser_url.as_str())?;
+
+            // Validate response
+            let token = match sock.next().await {
+                Some(Ok(trillium_websockets::Message::Text(json))) => {
+                    let data =
+                        serde_json::from_str::<serde_json::Value>(&json)?;
+
+                    if let Some(err) = data.get("error") {
+                        eyre::bail!("Error getting bearer token: {err}")
                     }
-                };
 
-                // Run login flow
-                let browser_url = {
-                    let mut url = url.clone();
-                    url.set_path("/login");
-                    url.set_query(Some(&format!("id={code}")));
-                    url
-                };
-                webbrowser::open(browser_url.as_str())?;
-
-                // Validate response
-                let token = match sock.next().await {
-                    Some(Ok(trillium_websockets::Message::Text(json))) => {
-                        let data =
-                            serde_json::from_str::<serde_json::Value>(&json)
-                                .map_err(Error::from)?;
-
-                        if let Some(err) = data.get("error") {
-                            return Err(Box::from(eyre::eyre!(
-                                "Error getting bearer token: {err}"
-                            )));
-                        }
-
-                        data.get("token")
-                            .and_then(|it| it.as_str().map(String::from))
-                            .ok_or(eyre::eyre!(
-                                "Successful response contained no bearer token!"
-                            ))?
-                    }
-                    Some(Err(error)) => {
-                        return Err(Box::from(eyre::eyre!(
-                            "Error receiving token over socket: {error}"
-                        )))
-                    }
-                    Some(Ok(rsp)) => {
-                        return Err(Box::from(eyre::eyre!(
+                    data.get("token")
+                        .and_then(|it| it.as_str().map(String::from))
+                        .ok_or(eyre::eyre!(
+                            "Successful response contained no bearer token!"
+                        ))?
+                }
+                Some(Err(error)) => {
+                    eyre::bail!("Error receiving token over socket: {error}")
+                }
+                Some(Ok(rsp)) => {
+                    eyre::bail!(
                         "Received incorrect response type from response: {rsp}",
-                    )))
-                    }
-                    None => {
-                        return Err(Box::from(eyre::eyre!(
-                            "Socket closed before final response was received!"
-                        )))
-                    }
-                };
+                    )
+                }
+                None => {
+                    eyre::bail!(
+                        "Socket closed before final response was received!"
+                    )
+                }
+            };
 
-                log::info!("Successfully fetched bearer token: {token}");
-                // Allow page to finish loading
-                smol::Timer::after(std::time::Duration::from_secs(2)).await;
-                Ok(())
-            },
-        )
+            log::info!("Successfully fetched bearer token: {token}");
+            // Allow page to finish loading
+            smol::Timer::after(std::time::Duration::from_secs(5)).await;
+            server.cancel().await;
+            Ok(())
+        })
     }
 }
