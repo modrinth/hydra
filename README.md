@@ -6,7 +6,7 @@
 ![GitHub issues](https://img.shields.io/github/issues/modrinth/hydra)
 
 ## Introduction
-Hydra is a simple wrapper around the Microsoft authentication flow intended to provide a way for launcher developers to authenticate accounts without needing to compile client-side secrets in code.
+Hydra is a simple wrapper around the Microsoft authentication flow intended to provide a way for launcher developers to authenticate accounts without needing to compile in a web server, create a (possibly impersonatable) Azure app, or deal with the headaches that MSA is often known to cause.
 
 ## Usage
 Hydra is based on a web socket, and to begin you will need to connect to one using the `/` route. You will then receive a message of the following format:
