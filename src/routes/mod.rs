@@ -47,7 +47,7 @@ mod test {
             get("/services/entitlements/mcstore").on(&router()),
             Status::Found,
             "",
-            "Location" => "https://api.minecraftservices.net/entitlements/mcstore"
+            "Location" => "https://api.minecraftservices.com/entitlements/mcstore"
         );
     }
 }
