@@ -32,8 +32,6 @@ If any errors occur, a message of the following form will be sent and the socket
 {"error": <ERROR MESSAGE>}
 ```
 
-As a convenience, the APIs provided via `api.minecraftservices.com` can be accessed using the `/services` redirect endpoint.
-
 To refresh an existing token, send the following in a `POST` request to the `/refresh` endpoint:
 ```json
 {

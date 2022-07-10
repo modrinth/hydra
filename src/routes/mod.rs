@@ -1,8 +1,8 @@
 //! Routes for Hydra
 use crate::{stages, templates::pages};
-use trillium::{conn_unwrap, KnownHeaderName, Status};
+use trillium::Status;
 use trillium_askama::AskamaConnExt;
-use trillium_router::{Router, RouterConnExt};
+use trillium_router::Router;
 
 mod auth;
 mod login;
@@ -13,13 +13,6 @@ pub fn router() -> Router {
     trillium_router::router()
         .get("/teapot", |conn: trillium::Conn| async move {
             conn.render(pages::Teapot).with_status(Status::ImATeapot)
-        })
-        .all("/services/*", |conn: trillium::Conn| async move {
-            let route = conn_unwrap!(conn.wildcard().map(String::from), conn);
-            conn.with_status(Status::Found).with_header(
-                KnownHeaderName::Location,
-                format!("https://api.minecraftservices.com/{route}"),
-            )
         })
         .get("/login", login::route)
         .get(stages::access_token::ROUTE_NAME, auth::route)
@@ -39,16 +32,6 @@ mod test {
             get("/teapot").on(&router()),
             Status::ImATeapot,
             pages::Teapot.render().unwrap()
-        );
-    }
-
-    #[test]
-    fn minecraft_services() {
-        assert_response!(
-            get("/services/entitlements/mcstore").on(&router()),
-            Status::Found,
-            "",
-            "Location" => "https://api.minecraftservices.com/entitlements/mcstore"
         );
     }
 }
