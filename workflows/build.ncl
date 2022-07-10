@@ -33,7 +33,7 @@ let image_name = "hydra" in
               /nix/var/nix/profiles/default/bin
               /nix/var/nix/profiles/per-user/root/channels
             "%m,
-            key = "${{ runner.os }}-nix-${{ hashFiles('./flake.lock', './flake.nix') }}",
+            key = "${{ runner.os }}-nix-${{ hashFiles('./Cargo.lock') }}",
           },
         },
         { uses = "cachix/install-nix-action@v17",

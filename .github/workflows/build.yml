@@ -13,7 +13,7 @@ jobs:
       - name: Cache
         uses: actions/cache@v3
         with:
-          key: "${{ runner.os }}-nix-${{ hashFiles('./flake.lock', './flake.nix') }}"
+          key: "${{ runner.os }}-nix-${{ hashFiles('./Cargo.lock') }}"
           path: "/nix/store\n/nix/var/nix/db/db.sqlite\n/nix/var/nix/profiles/per-user/${{ env.USER }}/profile/bin\n/nix/var/nix/profiles/default/bin\n/nix/var/nix/profiles/per-user/root/channels"
       - uses: cachix/install-nix-action@v17
         with:

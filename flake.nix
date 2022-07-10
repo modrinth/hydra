@@ -54,6 +54,7 @@
             , dockerTools
             , stdenv
             , copyPathsToStore
+            , cacert ? pkgs.pkgsCross.musl64.cacert
             , hydra ? packages.cross-hydra
             , certs ? null # A set containing the cert.pem and key.pem file paths
             }: let
@@ -63,6 +64,12 @@
             in dockerTools.buildImage {
               name = "hydra";
               tag = "latest";
+
+              copyToRoot = pkgs.buildEnv {
+                name = "hydra-root";
+                paths = [ pkgs.cacert ];
+                pathsToLink = [ "/etc" ];
+              };
 
               config = {
                 Cmd = [ "${hydra'}/bin/hydra" ];
