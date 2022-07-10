@@ -18,7 +18,7 @@ pub fn router() -> Router {
             let route = conn_unwrap!(conn.wildcard().map(String::from), conn);
             conn.with_status(Status::Found).with_header(
                 KnownHeaderName::Location,
-                format!("https://api.minecraftservices.net/{route}"),
+                format!("https://api.minecraftservices.com/{route}"),
             )
         })
         .get("/login", login::route)

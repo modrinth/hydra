@@ -5,7 +5,7 @@
 
     --content-width: 40%;
     --content-max-width: 300px;
-    --content-padding: .75em 0em;
+    --content-padding: 0 .75rem;
     --logo-width: 80%;
     --edge-rounding: 1rem;
 }
@@ -34,7 +34,11 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    margin: 0em 1em;
+    margin: 0rem 1rem;
+}
+
+.content :not(img) {
+    margin-bottom: 0;
 }
 
 .logo {
