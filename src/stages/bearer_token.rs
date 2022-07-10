@@ -8,7 +8,7 @@ const MCSERVICES_AUTH_URL: &str =
 
 #[derive(Template)]
 #[template(path = "bodies/bearer.json")]
-struct BearerBodyTemplate<'a> {
+struct Body<'a> {
     user_hash: &'a str,
     xsts_token: &'a str,
 }
@@ -18,7 +18,7 @@ pub async fn fetch_bearer(
     token: &str,
     uhs: &str,
 ) -> eyre::Result<String> {
-    let body = BearerBodyTemplate {
+    let body = Body {
         user_hash: uhs,
         xsts_token: token,
     }
@@ -34,11 +34,9 @@ pub async fn fetch_bearer(
     let body = req.response_body().read_string().await?;
     log::trace!("Received response: {body}");
 
-    let json = serde_json::from_str::<serde_json::Value>(&body)?;
-    json.get("access_token")
+    serde_json::from_str::<serde_json::Value>(&body)?
+        .get("access_token")
         .and_then(serde_json::Value::as_str)
         .map(String::from)
-        .ok_or(eyre::eyre!(
-            "Minecraft Services API didn't contain valid bearer token"
-        ))
+        .ok_or(eyre::eyre!("Response didn't contain valid bearer token"))
 }

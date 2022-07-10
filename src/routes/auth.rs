@@ -1,17 +1,14 @@
 //! Main authentication flow for Hydra
-use crate::{pages, stages};
+use crate::{
+    stages,
+    templates::{messages, pages},
+};
 
 use std::{collections::HashMap, sync::Arc};
-use trillium::{conn_try, Conn, KnownHeaderName, Status};
+use trillium::{conn_try, Conn, Status};
 use trillium_askama::{AskamaConnExt, Template};
 use trillium_client as c;
 use uuid::Uuid;
-
-#[derive(Template)]
-#[template(path = "messages/bearer.json")]
-struct SockResponse<'a> {
-    bearer_token: &'a str,
-}
 
 macro_rules! ws_conn_try {
     ($ctx:literal $status:path, $res:expr => $conn:expr, $ws_conn:expr) => {
@@ -19,11 +16,11 @@ macro_rules! ws_conn_try {
             Ok(res) => res,
             Err(err) => {
                 let error = format!("In {}: {err}", $ctx);
-                let render = super::socket::render_error(&error);
+                let render = messages::Error::render(&error);
                 $ws_conn.send_string(render.clone()).await;
                 trillium::log_error!($ws_conn.close().await);
-                return pages::error::Page {
-                    code: &$status,
+                return pages::Error {
+                    code: $status,
                     message: &render,
                 }
                 .render($conn);
@@ -36,8 +33,7 @@ macro_rules! ws_conn_try {
 pub async fn route(conn: Conn) -> Conn {
     let params = url::form_urlencoded::parse(conn.querystring().as_bytes())
         .collect::<HashMap<_, _>>();
-    let client =
-        Arc::new(c::Client::<crate::Connector>::new().with_default_pool());
+    let client = c::Client::<crate::Connector>::new().with_default_pool();
     let state = conn
         .state::<Arc<crate::db::RuntimeState>>()
         .unwrap()
@@ -54,8 +50,8 @@ pub async fn route(conn: Conn) -> Conn {
     let conn_id = match params.get("state") {
         Some(id) => id.clone().into_owned(),
         None => {
-            return pages::error::Page {
-                code: &Status::BadRequest,
+            return pages::Error {
+                code: Status::BadRequest,
                 message:
                     "No state sent, you probably are using the wrong route",
             }
@@ -67,8 +63,8 @@ pub async fn route(conn: Conn) -> Conn {
         .and_then(|it| state.auth_sockets.get_mut(&it))
     {
         Some(id) => id,
-        None => return pages::error::Page {
-            code: &Status::BadRequest,
+        None => return pages::Error {
+            code: Status::BadRequest,
             message:
                 "Invalid state sent, you probably need to get a new websocket",
         }
@@ -76,7 +72,6 @@ pub async fn route(conn: Conn) -> Conn {
     };
     let ws_conn = ws_conn.value_mut();
 
-    // TODO: integrate sock
     log::info!("Signing in with code {code}");
     let access_token = ws_conn_try!(
         "OAuth token exchange" Status::InternalServerError,
@@ -95,7 +90,7 @@ pub async fn route(conn: Conn) -> Conn {
         uhs,
     } = ws_conn_try!(
         "XBox Live token exchange" Status::InternalServerError,
-        stages::xbl_signin::login_xbl(&client, &access_token).await
+        stages::xbl_signin::login_xbl(&client, &access_token.access_token).await
         => conn, ws_conn
     );
 
@@ -108,51 +103,44 @@ pub async fn route(conn: Conn) -> Conn {
     match xsts_response {
         stages::xsts_token::XSTSResponse::Unauthorized(err) => {
             ws_conn
-                .send_string(super::socket::render_error(&format!(
+                .send_string(messages::Error::render(&format!(
                     "Error getting XBox Live token: {err}"
                 )))
                 .await;
             trillium::log_error!(ws_conn.close().await);
 
-            pages::error::Page {
-                code: &Status::Forbidden,
+            pages::Error {
+                code: Status::Forbidden,
                 message: &err,
             }
             .render(conn)
         }
         stages::xsts_token::XSTSResponse::Success { token: xsts_token } => {
-            let bearer_token = &conn_try!(
+            let bearer_token = &ws_conn_try!(
+                "Bearer token flow" Status::InternalServerError,
                 stages::bearer_token::fetch_bearer(&client, &xsts_token, &uhs)
-                    .await,
-                conn
+                    .await
+                => conn, ws_conn
             );
             log::info!("Signin for code {code} successful");
             ws_conn
-                .send_string(SockResponse { bearer_token }.render().unwrap())
+                .send_string(
+                    messages::BearerToken {
+                        bearer_token,
+                        refresh_token: &access_token.refresh_token,
+                    }
+                    .render()
+                    .unwrap(),
+                )
                 .await;
             trillium::log_error!(ws_conn.close().await);
 
-            let player_info = (|| {
-                let client = Arc::clone(&client);
-                async move {
-                    let mut resp = client
-                    .get("https://api.minecraftservices.com/minecraft/profile")
-                    .with_header(
-                        KnownHeaderName::Authorization,
-                        format!("Bearer {}", &bearer_token),
-                    );
-                    resp.send().await.ok()?;
+            let player_info =
+                stages::player_info::fetch_info(&client, bearer_token)
+                    .await
+                    .unwrap_or_default();
 
-                    serde_json::from_str::<pages::success::PlayerInfo>(
-                        &resp.response_body().read_string().await.ok()?,
-                    )
-                    .ok()
-                }
-            })()
-            .await
-            .unwrap_or_default();
-
-            conn.render(pages::success::Page {
+            conn.render(pages::Success {
                 name: &player_info.name,
             })
         }

@@ -3,10 +3,9 @@
     --color-fg: hsl(221, 39%, 90%);
     --color-section-bg: hsl(220, 13%, 19%);
 
-    --content-width: 40%;
+    --content-width: 30%;
     --content-max-width: 300px;
-    --content-padding: 0 .75rem;
-    --logo-width: 80%;
+    --content-padding: .75rem;
     --edge-rounding: 1rem;
 }
 
@@ -28,22 +27,20 @@ body {
     background-color: var(--color-section-bg);
     width: var(--content-width);
     max-width: var(--content-max-width);
-    padding: var(--content-padding);
     border-radius: var(--edge-rounding);
-    display: flex;
-    flex-direction: column;
+    padding: var(--content-padding);
     justify-content: center;
     align-items: center;
-    margin: 0rem 1rem;
+    box-sizing: border-box;
 }
 
-.content :not(img) {
+.content h4 {
     margin-bottom: 0;
 }
 
 .logo {
     display: block;
-    width: var(--logo-width);
+    width: 100%;
     margin-left: auto;
     margin-right: auto;
 }

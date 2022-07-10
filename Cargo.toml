@@ -11,6 +11,7 @@ build = "./build.rs"
 askama = "0.11.0"
 dashmap = "5.3"
 directories = "4.0"
+moretypes = "0.1"
 uuid = {version = "1.1", features = ["v5"]}
 url = "2.2"
 
@@ -41,4 +42,3 @@ async-tungstenite = "0.17"
 
 [features]
 tls = []
-integration-test = []

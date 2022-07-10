@@ -10,7 +10,7 @@ args = ["clippy", "--all-features"]
 
 [tasks.test]
 command = "cargo"
-args = ["test", "--features", "integration-test"]
+args = ["test", "--", "--include-ignored"]
 dependencies = ["check"]
 
 [tasks.test.env]

@@ -11,11 +11,13 @@ struct XBLBodyTemplate<'a> {
     access_token: &'a str,
 }
 
+// Deserialization
 pub struct XBLLogin {
     pub token: String,
     pub uhs: String,
 }
 
+// Impl
 pub async fn login_xbl(
     client: &c::Client<crate::Connector>,
     token: &str,
@@ -24,7 +26,6 @@ pub async fn login_xbl(
         access_token: token,
     }
     .render()?;
-
     log::info!("POST {XBL_AUTH_URL}");
     let mut req = client
         .post(XBL_AUTH_URL)

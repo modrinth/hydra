@@ -2,28 +2,12 @@
 use crate::{
     config::Config,
     db::{RuntimeState, UserID},
+    templates::messages,
 };
-use std::{sync::Arc, time::Instant};
+use std::sync::Arc;
 use trillium_askama::Template;
 use trillium_websockets::{websocket, WebSocketConn};
 use uuid::Uuid;
-
-#[derive(Template)]
-#[template(path = "messages/error.json")]
-pub struct WebSocketError<'a> {
-    reason: &'a str,
-}
-
-#[inline]
-pub(super) fn render_error(reason: &str) -> String {
-    WebSocketError { reason }.render().unwrap()
-}
-
-#[derive(Template)]
-#[template(path = "messages/ratelimit_code.json")]
-pub struct WebSocketCode<'a> {
-    login_code: &'a str,
-}
 
 #[inline]
 pub fn route() -> impl trillium::Handler {
@@ -34,7 +18,7 @@ pub async fn sock(mut conn: WebSocketConn) {
     let addr = if let Some(addr) = conn.peer_ip() {
         addr
     } else {
-        conn.send_string(render_error(
+        conn.send_string(messages::Error::render(
             "Could not determine IP address of connector!",
         ))
         .await;
@@ -42,38 +26,24 @@ pub async fn sock(mut conn: WebSocketConn) {
         trillium::log_error!(conn.close().await);
         return;
     };
-    let id = UserID::from(addr);
 
+    let id = UserID::from(addr);
     let (config, state) = (
         conn.take_state::<Arc<Config>>().unwrap(),
         conn.take_state::<Arc<RuntimeState>>().unwrap(),
     );
-
-    let (last_req_time, rate) = state
-        .login_attempts
-        .get(&id)
-        .map_or((Instant::now(), 0), |it| *it.value());
-
-    match (last_req_time, rate) {
-        (expired, _) if expired.elapsed() > config.rate_limit_expires => {
-            state.login_attempts.insert(id, (Instant::now(), 1));
-        }
-        (_, rate) if rate >= config.rate_limit => {
-            conn.send_string(render_error(&format!(
-                "Rate limit exceeded for IP {addr}"
-            )))
-            .await;
-            trillium::log_error!(conn.close().await);
-            return;
-        }
-        (_, rate) => {
-            state.login_attempts.insert(id, (Instant::now(), rate + 1));
-        }
+    if state.rate_limit(&config, id) {
+        conn.send_string(messages::Error::render(&format!(
+            "Rate limit exceeded for IP {addr}"
+        )))
+        .await;
+        trillium::log_error!(conn.close().await);
+        return;
     }
 
     let conn_id = Uuid::new_v5(&Uuid::NAMESPACE_URL, id.as_ref());
     conn.send_string(
-        WebSocketCode {
+        messages::RateLimitCode {
             login_code: conn_id
                 .as_hyphenated()
                 .encode_lower(&mut Uuid::encode_buffer()),
@@ -85,7 +55,7 @@ pub async fn sock(mut conn: WebSocketConn) {
 
     if let Some(mut old_conn) = state.auth_sockets.insert(conn_id, conn) {
         old_conn
-            .send_string(render_error(
+            .send_string(messages::Error::render(
                 "New connection created from this address",
             ))
             .await;

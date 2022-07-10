@@ -1,7 +1,6 @@
 //! Hydra configuration
 #[allow(unused)]
-use std::path::PathBuf;
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 use url::Url;
 
 #[derive(Debug)]
@@ -29,7 +28,7 @@ macro_rules! config_option {
 }
 
 impl Config {
-    pub fn init() -> Self {
+    pub fn init() -> eyre::Result<Self> {
         let port = config_option!(
             env "HYDRA_PORT" => |it| it.parse::<u16>().ok(),
             default 8080
@@ -48,12 +47,12 @@ impl Config {
         let client_id = config_option!(
             env "HYDRA_CLIENT_ID"
         )
-        .expect("Could not find Hydra client ID!");
+        .ok_or_else(|| eyre::eyre!("Could not find Hydra client ID"))?;
 
         let client_secret = config_option!(
             env "HYDRA_CLIENT_SECRET"
         )
-        .expect("Could not find Hydra client secret!");
+        .ok_or_else(|| eyre::eyre!("Could not find Hydra client secret"))?;
 
         let rate_limit = config_option!(
             env "HYDRA_RATE_LIMIT" => |it| it.parse::<u8>().ok(),
@@ -68,23 +67,26 @@ impl Config {
             default Duration::from_secs(30 * 60)
         );
 
-        #[allow(unused_variables)]
-        let dirs =
-            directories::ProjectDirs::from("com", "Modrinth", "Hydra").unwrap();
+        #[allow(unused)]
+        let dirs = directories::ProjectDirs::from("com", "Modrinth", "Hydra");
 
         #[cfg(feature = "tls")]
         let (cert_file, key_file) = (
             config_option!(
-                env "HYDRA_CERT" => |it| Some(PathBuf::from(it)),
-                default dirs.config_dir().join("cert.pem")
-            ),
+                env "HYDRA_CERT" => |it| Some(PathBuf::from(it))
+            )
+            .or_else(|| Some(dirs.as_ref()?.config_dir().join("cert.pem")))
+            .ok_or(eyre::eyre!(
+                "Could not find SSL certificate in any location"
+            ))?,
             config_option!(
-                env "HYDRA_KEY" => |it| Some(PathBuf::from(it)),
-                default dirs.config_dir().join("key.pem")
-            ),
+                env "HYDRA_KEY" => |it| Some(PathBuf::from(it))
+            )
+            .or_else(|| Some(dirs.as_ref()?.config_dir().join("key.pem")))
+            .ok_or(eyre::eyre!("Could not find SSL key in any location"))?,
         );
 
-        Self {
+        Ok(Self {
             port,
             host,
             public_url,
@@ -96,6 +98,6 @@ impl Config {
             cert_file,
             #[cfg(feature = "tls")]
             key_file,
-        }
+        })
     }
 }

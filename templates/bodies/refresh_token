@@ -1,0 +1,5 @@
+client_id={{ client_id|urlencode -}}
+&client_secret={{ client_secret|urlencode -}}
+&refresh_token={{ refresh_token|urlencode -}}
+&grant_type={{ "refresh_token" -}}
+&redirect_uri={{ redirect_uri|urlencode -}}

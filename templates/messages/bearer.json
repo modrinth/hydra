@@ -1,4 +1,5 @@
 {
     "token": "{{ bearer_token }}",
+    "refresh_token": "{{ refresh_token }}",
     "expires_after": 86400
 }
