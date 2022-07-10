@@ -14,16 +14,17 @@ struct SockResponse<'a> {
 }
 
 macro_rules! ws_conn_try {
-    ($status:path, $res:expr => $conn:expr, $ws_conn:expr) => {
+    ($ctx:literal $status:path, $res:expr => $conn:expr, $ws_conn:expr) => {
         match $res {
             Ok(res) => res,
             Err(err) => {
-                let err = super::socket::render_error(&err.to_string());
-                $ws_conn.send_string(err.clone()).await;
+                let error = format!("In {}: {err}", $ctx);
+                let render = super::socket::render_error(&error);
+                $ws_conn.send_string(render.clone()).await;
                 trillium::log_error!($ws_conn.close().await);
                 return pages::error::Page {
                     code: &$status,
-                    message: &err,
+                    message: &render,
                 }
                 .render($conn);
             }
@@ -78,7 +79,7 @@ pub async fn route(conn: Conn) -> Conn {
     // TODO: integrate sock
     log::info!("Signing in with code {code}");
     let access_token = ws_conn_try!(
-        Status::InternalServerError,
+        "OAuth token exchange" Status::InternalServerError,
         stages::access_token::fetch_token(
             &client,
             &config.public_url,
@@ -93,13 +94,13 @@ pub async fn route(conn: Conn) -> Conn {
         token: xbl_token,
         uhs,
     } = ws_conn_try!(
-        Status::InternalServerError,
+        "XBox Live token exchange" Status::InternalServerError,
         stages::xbl_signin::login_xbl(&client, &access_token).await
         => conn, ws_conn
     );
 
     let xsts_response = ws_conn_try!(
-        Status::InternalServerError,
+        "XSTS token exchange" Status::InternalServerError,
         stages::xsts_token::fetch_token(&client, &xbl_token).await
         => conn, ws_conn
     );

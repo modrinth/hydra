@@ -30,7 +30,7 @@ pub async fn fetch_token(
     }
     .render()?;
 
-    log::trace!("POST {OAUTH_TOKEN_URL} (code: {code})");
+    log::info!("POST {OAUTH_TOKEN_URL} (code: {code})");
     let mut req = client
         .post(OAUTH_TOKEN_URL)
         .with_header(

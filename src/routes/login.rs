@@ -42,7 +42,7 @@ pub async fn route(conn: Conn) -> Conn {
         }
     };
 
-    log::trace!("GET {url}");
+    log::info!("GET {url}");
     conn.with_status(Status::SeeOther)
         .with_header(KnownHeaderName::Location, url)
 }

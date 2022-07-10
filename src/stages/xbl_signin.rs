@@ -25,7 +25,7 @@ pub async fn login_xbl(
     }
     .render()?;
 
-    log::trace!("POST {XBL_AUTH_URL}");
+    log::info!("POST {XBL_AUTH_URL}");
     let mut req = client
         .post(XBL_AUTH_URL)
         .with_header(KnownHeaderName::ContentType, "application/json")

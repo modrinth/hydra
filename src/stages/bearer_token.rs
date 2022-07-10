@@ -24,7 +24,7 @@ pub async fn fetch_bearer(
     }
     .render()?;
 
-    log::trace!("POST {MCSERVICES_AUTH_URL}");
+    log::info!("POST {MCSERVICES_AUTH_URL}");
     let mut req = client
         .post(MCSERVICES_AUTH_URL)
         .with_header(KnownHeaderName::ContentType, "application/json")

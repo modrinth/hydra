@@ -22,7 +22,7 @@ pub async fn fetch_token(
 ) -> eyre::Result<XSTSResponse> {
     let body = XSTSBodyTemplate { user_token: token }.render()?;
 
-    log::trace!("POST {XSTS_AUTH_URL}");
+    log::info!("POST {XSTS_AUTH_URL}");
     let mut req = client
         .post(XSTS_AUTH_URL)
         .with_header(KnownHeaderName::ContentType, "application/json")
