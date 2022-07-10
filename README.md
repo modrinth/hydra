@@ -21,6 +21,7 @@ Next, you will need to open a web browser to the `/login` route with the `id` qu
 ```json
 {
     "token": <BEARER TOKEN>,
+    "refresh_token": <REFRESH TOKEN>,
     "expires_after": <SECONDS UNTIL EXPIRATION>
 }
 ```
@@ -33,6 +34,14 @@ If any errors occur, a message of the following form will be sent and the socket
 
 As a convenience, the APIs provided via `api.minecraftservices.com` can be accessed using the `/services` redirect endpoint.
 
+To refresh an existing token, send the following in a `POST` request to the `/refresh` endpoint:
+```json
+{
+    "refresh_token": <REFRESH TOKEN HERE>
+}
+```
+
+This does not need a socket or a webview, and the response is stored in the HTTP body. Otherwise, the response is the same (though you do need to update both tokens to the returned valuees).
 
 ## Deployment
 To deploy Hydra, set the `HYDRA_CLIENT_ID` and `HYDRA_CLIENT_SECRET` environment variables using the values from an Azure application. You can build a release version of Hydra with `cargo build --release`, or download one of the artifacts on GitHub Actions. Alternatively, you can use the `.#hydra` and `.#cross-hydra` (builds static GNU/Linux executables using Musl) attributes in Nix. The local hostname uses the `HYDRA_HOST` and `HYDRA_PORT` variables, with the public hostname being stored in the `HYDRA_PUBLIC_URL` variable.
