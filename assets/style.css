@@ -21,6 +21,8 @@ body {
     justify-content: center;
     align-items: center;
     text-align: center;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Oxygen,
+    Ubuntu, Roboto, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
 }
 
 .content {
