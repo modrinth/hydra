@@ -9,7 +9,6 @@ let image_name = "hydra" in
      push = {
          tags = [ "v*" ],
      },
-     pull_request = {},
   },
   env = {
     CARGO_TERM_COLOR = `always,
