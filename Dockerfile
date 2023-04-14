@@ -21,4 +21,3 @@ COPY --from=build /usr/src/hydra/assets /hydra/assets
 WORKDIR /hydra
 
 CMD /hydra/hydra
-w
