@@ -1,15 +1,9 @@
 //! Signin for XBox Live
-use trillium::KnownHeaderName;
-use trillium_askama::Template;
-use trillium_client as c;
+
+use crate::stages::REQWEST_CLIENT;
+use serde_json::json;
 
 const XBL_AUTH_URL: &str = "https://user.auth.xboxlive.com/user/authenticate";
-
-#[derive(Template)]
-#[template(path = "bodies/xbl.json")]
-struct XBLBodyTemplate<'a> {
-    access_token: &'a str,
-}
 
 // Deserialization
 pub struct XBLLogin {
@@ -18,24 +12,23 @@ pub struct XBLLogin {
 }
 
 // Impl
-pub async fn login_xbl(
-    client: &c::Client<crate::Connector>,
-    token: &str,
-) -> eyre::Result<XBLLogin> {
-    let body = XBLBodyTemplate {
-        access_token: token,
-    }
-    .render()?;
-    log::info!("POST {XBL_AUTH_URL}");
-    let mut req = client
+pub async fn login_xbl(token: &str) -> eyre::Result<XBLLogin> {
+    let body = REQWEST_CLIENT
         .post(XBL_AUTH_URL)
-        .with_header(KnownHeaderName::ContentType, "application/json")
-        .with_header(KnownHeaderName::Accept, "application/json")
-        .with_body(body);
-    req.send().await?;
-
-    let body = req.response_body().read_string().await?;
-    log::trace!("Received response: {body}");
+        .header(reqwest::header::ACCEPT, "application/json")
+        .json(&json!({
+            "Properties": {
+                "AuthMethod": "RPS",
+                "SiteName": "user.auth.xboxlive.com",
+                "RpsTicket": format!("d={token}")
+            },
+            "RelyingParty": "http://auth.xboxlive.com",
+            "TokenType": "JWT"
+        }))
+        .send()
+        .await?
+        .text()
+        .await?;
 
     let json = serde_json::from_str::<serde_json::Value>(&body)?;
     let token = Some(&json)

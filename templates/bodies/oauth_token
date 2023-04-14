@@ -1,5 +1,0 @@
-client_id={{ client_id|urlencode -}}
-&client_secret={{ client_secret|urlencode -}}
-&code={{ auth_code|urlencode -}}
-&grant_type={{ "authorization_code" -}}
-&redirect_uri={{ redirect_uri|urlencode -}}

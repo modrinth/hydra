@@ -1,7 +1,7 @@
 :root {
-    --color-bg: hsl(220, 13%, 10%);
-    --color-fg: hsl(221, 39%, 90%);
-    --color-section-bg: hsl(220, 13%, 19%);
+    --color-bg: #16181c;
+    --color-fg: #b0bac5;
+    --color-section-bg: #26292f;
 
     --content-width: 30%;
     --content-max-width: 300px;

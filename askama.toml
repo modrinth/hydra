@@ -1,3 +1,0 @@
-[[escaper]]
-path = "::askama::Text"
-extensions = ["json"]

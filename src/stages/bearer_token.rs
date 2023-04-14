@@ -1,38 +1,21 @@
 //! Minecraft bearer token
-use trillium::KnownHeaderName;
-use trillium_askama::Template;
-use trillium_client as c;
+use crate::stages::REQWEST_CLIENT;
+use serde_json::json;
 
 const MCSERVICES_AUTH_URL: &str =
     "https://api.minecraftservices.com/authentication/login_with_xbox";
 
-#[derive(Template)]
-#[template(path = "bodies/bearer.json")]
-struct Body<'a> {
-    user_hash: &'a str,
-    xsts_token: &'a str,
-}
-
-pub async fn fetch_bearer(
-    client: &c::Client<crate::Connector>,
-    token: &str,
-    uhs: &str,
-) -> eyre::Result<String> {
-    let body = Body {
-        user_hash: uhs,
-        xsts_token: token,
-    }
-    .render()?;
-
-    log::info!("POST {MCSERVICES_AUTH_URL}");
-    let mut req = client
+pub async fn fetch_bearer(token: &str, uhs: &str) -> eyre::Result<String> {
+    let body = REQWEST_CLIENT
         .post(MCSERVICES_AUTH_URL)
-        .with_header(KnownHeaderName::ContentType, "application/json")
-        .with_body(body);
-    req.send().await?;
-
-    let body = req.response_body().read_string().await?;
-    log::trace!("Received response: {body}");
+        .json(&json!({
+            "identityToken": format!("XBL3.0 x={};{}", token, uhs),
+            "ensureLegacyEnabled": true
+        }))
+        .send()
+        .await?
+        .text()
+        .await?;
 
     serde_json::from_str::<serde_json::Value>(&body)?
         .get("access_token")

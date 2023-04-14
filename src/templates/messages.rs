@@ -1,33 +1,30 @@
 //! Hydra machine-facing messages
-use trillium_askama::Template;
+use serde::Serialize;
 
 /// Error message
-#[derive(Template)]
-#[template(path = "messages/error.json")]
-#[moretypes::record]
+#[derive(Serialize)]
 pub struct Error<'a> {
-    reason: &'a str,
+    pub error: &'a str,
 }
 
 impl<'a> Error<'a> {
     pub fn render(reason: &'a str) -> String {
-        Self { reason }.render().unwrap()
+        serde_json::to_string(&Self { error: reason }).unwrap()
     }
 }
 
 /// Token fetched successfully
-#[derive(Template)]
-#[template(path = "messages/bearer.json")]
-#[moretypes::record]
+#[derive(Serialize)]
 pub struct BearerToken<'a> {
-    bearer_token: &'a str,
-    refresh_token: &'a str,
+    // bearer token
+    pub token: &'a str,
+    pub refresh_token: &'a str,
+    // always 86400
+    pub expires_after: i32,
 }
 
 /// Rate limit code acquired
-#[derive(Template)]
-#[template(path = "messages/ratelimit_code.json")]
-#[moretypes::record]
+#[derive(Serialize)]
 pub struct RateLimitCode<'a> {
-    login_code: &'a str,
+    pub login_code: &'a str,
 }
