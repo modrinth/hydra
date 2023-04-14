@@ -1,23 +1,42 @@
 //! Hydra machine-facing messages
+use std::fmt::{Display, Formatter};
 use actix_web::http::StatusCode;
 use actix_web::HttpResponse;
 use serde_json::json;
 
 /// Error message
-pub struct Error<'a> {
+#[derive(Debug)]
+pub struct Error {
     pub code: StatusCode,
-    pub reason: &'a str,
+    pub reason: String,
 }
 
-impl<'a> Error<'a> {
-    pub fn render(self) -> HttpResponse {
+impl Error {
+    pub fn render_string(reason: &str) -> String {
+        json!({
+            "error": reason
+        }).to_string()
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", json!({
+            "error": self.reason
+        }))?;
+
+        Ok(())
+    }
+}
+
+impl actix_web::ResponseError for Error {
+    fn status_code(&self) -> StatusCode {
+        self.code
+    }
+
+    fn error_response(&self) -> HttpResponse {
         HttpResponse::build(self.code).json(json!({
             "error": self.reason
         }))
     }
-}
-
-/// Rate limit code acquired
-pub struct RateLimitCode<'a> {
-    pub login_code: &'a str,
 }

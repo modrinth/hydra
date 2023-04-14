@@ -6,12 +6,14 @@ const PROFILE_URL: &str = "https://api.minecraftservices.com/minecraft/profile";
 
 #[derive(Deserialize)]
 pub struct PlayerInfo {
+    pub id: String,
     pub name: String,
 }
 
 impl Default for PlayerInfo {
     fn default() -> Self {
         Self {
+            id: "2578615362f649b0a43b6dfffcf44d33".to_string(),
             name: String::from("???"),
         }
     }

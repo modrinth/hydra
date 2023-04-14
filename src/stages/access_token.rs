@@ -39,19 +39,19 @@ pub async fn fetch_token(
 }
 
 pub async fn refresh_token(
-    public_uri: &url::Url,
+    public_uri: &str,
     refresh_token: &str,
     client_id: &str,
     client_secret: &str,
 ) -> eyre::Result<Tokens> {
-    let redirect_uri = public_uri.join(ROUTE_NAME)?;
+    let redirect_uri = format!("{}/{}", public_uri, ROUTE_NAME);
 
     let mut params = HashMap::new();
     params.insert("client_id", client_id);
     params.insert("client_secret", client_secret);
     params.insert("refresh_token", refresh_token);
     params.insert("grant_type", "refresh_token");
-    params.insert("redirect_uri", redirect_uri.as_str());
+    params.insert("redirect_uri", &redirect_uri);
 
     let result = REQWEST_CLIENT
         .post(OAUTH_TOKEN_URL)

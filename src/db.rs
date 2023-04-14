@@ -2,13 +2,13 @@
 use dashmap::DashMap;
 use std::time::Duration;
 use std::{net::IpAddr, time::Instant};
-// use trillium_websockets::WebSocketConn;
+use actix_ws::Session;
 use crate::parse_var;
 use uuid::Uuid;
 
 pub struct RuntimeState {
     pub login_attempts: DashMap<UserID, (Instant, u8)>,
-    // pub auth_sockets: DashMap<Uuid, WebSocketConn>,
+    pub auth_sockets: DashMap<Uuid, Session>,
 }
 
 impl RuntimeState {
@@ -42,7 +42,7 @@ impl Default for RuntimeState {
     fn default() -> Self {
         Self {
             login_attempts: DashMap::new(),
-            // auth_sockets: DashMap::new(),
+            auth_sockets: DashMap::new(),
         }
     }
 }

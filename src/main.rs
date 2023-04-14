@@ -10,15 +10,11 @@ use log::{error, info, warn};
 use pretty_env_logger::env_logger;
 use pretty_env_logger::env_logger::Env;
 use std::str::FromStr;
-use std::sync::Arc;
 
 use actix_web::middleware::Logger;
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
-
-#[get("/")]
-async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
-}
+use actix_web::{web, App, HttpServer};
+use actix_web::http::StatusCode;
+use crate::templates::pages;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -36,7 +32,18 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(Logger::default())
             .app_data(web::Data::new(db::RuntimeState::default()))
-            .service(hello)
+            .app_data(web::FormConfig::default().error_handler(|err, _req| {
+                pages::Error { code: StatusCode::BAD_REQUEST, message: err.to_string() }.into()
+            }))
+            .app_data(web::PathConfig::default().error_handler(|err, _req| {
+                pages::Error { code: StatusCode::BAD_REQUEST, message: err.to_string() }.into()
+            }))
+            .app_data(web::QueryConfig::default().error_handler(|err, _req| {
+                pages::Error { code: StatusCode::BAD_REQUEST, message: err.to_string() }.into()
+            }))
+            .app_data(web::JsonConfig::default().error_handler(|err, _req| {
+                pages::Error { code: StatusCode::BAD_REQUEST, message: err.to_string() }.into()
+            }))
             .configure(routes::config)
             .service(Files::new("/", "assets/"))
     })

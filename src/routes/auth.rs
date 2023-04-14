@@ -1,145 +1,128 @@
 //! Main authentication flow for Hydra
-use crate::{
-    stages,
-    templates::{messages, pages},
-};
+use crate::{parse_var, stages, templates::{messages, pages}};
 
-use std::{collections::HashMap, sync::Arc};
+use actix_web::{get, HttpResponse, web};
+use actix_web::http::StatusCode;
+use serde::Deserialize;
+use serde_json::json;
+use url::Url;
 use uuid::Uuid;
+use crate::db::RuntimeState;
 
 macro_rules! ws_conn_try {
-    ($ctx:literal $status:path, $res:expr => $conn:expr, $ws_conn:expr) => {
+    ($ctx:literal $status:path, $res:expr => $ws_conn:expr) => {
         match $res {
             Ok(res) => res,
             Err(err) => {
                 let error = format!("In {}: {err}", $ctx);
-                let render = messages::Error::render(&error);
-                $ws_conn.send_string(render.clone()).await;
-                trillium::log_error!($ws_conn.close().await);
-                return pages::Error {
+                let render = messages::Error::render_string(&error);
+                let _ = $ws_conn.text(render.clone()).await;
+                let _ = $ws_conn.close(None).await;
+                return Err(pages::Error {
                     code: $status,
-                    message: &render,
-                }
-                .render($conn);
+                    message: render,
+                });
             }
         }
     };
 }
 
-#[allow(clippy::too_many_lines)]
-pub async fn route(conn: Conn) -> Conn {
-    let params = url::form_urlencoded::parse(conn.querystring().as_bytes())
-        .collect::<HashMap<_, _>>();
-    let client = c::Client::<crate::Connector>::new().with_default_pool();
-    let state = conn
-        .state::<Arc<crate::db::RuntimeState>>()
-        .unwrap()
-        .clone();
-    let config = conn.state::<Arc<crate::config::Config>>().unwrap().clone();
+#[derive(Deserialize)]
+pub struct Query {
+    pub code: String,
+    pub state: String,
+}
 
-    let code = conn_try!(
-        params
-            .get("code")
-            .ok_or(eyre::eyre!("No access code received")),
-        conn
-    );
+#[get("auth-redirect")]
+pub async fn route(db: web::Data<RuntimeState>, info: web::Query<Query>) -> Result<HttpResponse, pages::Error> {
+    let public_url = parse_var::<String>("HYDRA_PUBLIC_URL").unwrap_or(format!(
+        "http://{}",
+        parse_var::<String>("BIND_ADDR").unwrap()
+    ));
+    let client_id = parse_var::<String>("HYDRA_CLIENT_ID").unwrap();
+    let client_secret = parse_var::<String>("HYDRA_CLIENT_SECRET").unwrap();
 
-    let conn_id = match params.get("state") {
-        Some(id) => id.clone().into_owned(),
-        None => {
-            return pages::Error {
-                code: Status::BadRequest,
-                message:
-                    "No state sent, you probably are using the wrong route",
-            }
-            .render(conn);
-        }
-    };
-    let mut ws_conn = match Uuid::try_parse(&conn_id)
+    let code = &info.code;
+
+    let mut ws_conn = Uuid::try_parse(&info.state)
         .ok()
-        .and_then(|it| state.auth_sockets.get_mut(&it))
-    {
-        Some(id) => id,
-        None => return pages::Error {
-            code: Status::BadRequest,
-            message:
-                "Invalid state sent, you probably need to get a new websocket",
-        }
-        .render(conn),
-    };
-    let ws_conn = ws_conn.value_mut();
+        .and_then(|it| db.auth_sockets.get_mut(&it)).ok_or_else(|| pages::Error {
+        code: StatusCode::BAD_REQUEST,
+        message: "Invalid state sent, you probably need to get a new websocket".to_string(),
+    })?;
+    let mut ws_conn = ws_conn.value_mut().clone();
 
-    log::info!("Signing in with code {code}");
     let access_token = ws_conn_try!(
-        "OAuth token exchange" Status::InternalServerError,
+        "OAuth token exchange" StatusCode::INTERNAL_SERVER_ERROR,
         stages::access_token::fetch_token(
-            &client,
-            &config.public_url,
+            &Url::parse(&public_url).unwrap(),
             code,
-            &config.client_id,
-            &config.client_secret,
+            &client_id,
+            &client_secret,
         ).await
-        => conn, ws_conn
+        => ws_conn
     );
 
     let stages::xbl_signin::XBLLogin {
         token: xbl_token,
         uhs,
     } = ws_conn_try!(
-        "XBox Live token exchange" Status::InternalServerError,
-        stages::xbl_signin::login_xbl(&client, &access_token.access_token).await
-        => conn, ws_conn
+        "XBox Live token exchange" StatusCode::INTERNAL_SERVER_ERROR,
+        stages::xbl_signin::login_xbl(&access_token.access_token).await
+        => ws_conn
     );
 
     let xsts_response = ws_conn_try!(
-        "XSTS token exchange" Status::InternalServerError,
-        stages::xsts_token::fetch_token(&client, &xbl_token).await
-        => conn, ws_conn
+        "XSTS token exchange" StatusCode::INTERNAL_SERVER_ERROR,
+        stages::xsts_token::fetch_token(&xbl_token).await
+        => ws_conn
     );
 
     match xsts_response {
         stages::xsts_token::XSTSResponse::Unauthorized(err) => {
-            ws_conn
-                .send_string(messages::Error::render(&format!(
+            let _ = ws_conn
+                .text(messages::Error::render_string(&format!(
                     "Error getting XBox Live token: {err}"
                 )))
                 .await;
-            trillium::log_error!(ws_conn.close().await);
+            let _ = ws_conn.close(None).await;
 
-            pages::Error {
-                code: Status::Forbidden,
-                message: &err,
-            }
-            .render(conn)
+           Err(pages::Error {
+                code: StatusCode::FORBIDDEN,
+                message: err,
+            })
         }
         stages::xsts_token::XSTSResponse::Success { token: xsts_token } => {
             let bearer_token = &ws_conn_try!(
-                "Bearer token flow" Status::InternalServerError,
-                stages::bearer_token::fetch_bearer(&client, &xsts_token, &uhs)
+                "Bearer token flow" StatusCode::INTERNAL_SERVER_ERROR,
+                stages::bearer_token::fetch_bearer(&xsts_token, &uhs)
                     .await
-                => conn, ws_conn
+                => ws_conn
             );
-            log::info!("Signin for code {code} successful");
+
             ws_conn
-                .send_string(
-                    messages::BearerToken {
-                        bearer_token,
-                        refresh_token: &access_token.refresh_token,
-                    }
-                    .render()
-                    .unwrap(),
+                .text(
+                    json!({
+                        "token": bearer_token,
+                        "refresh_token": &access_token.refresh_token,
+                        "expires_after": 86400
+                    }).to_string()
                 )
-                .await;
-            trillium::log_error!(ws_conn.close().await);
+                .await.map_err(|_| pages::Error {
+                code: StatusCode::BAD_REQUEST,
+                message: "Failed to send login details to launcher. Try restarting the login process!".to_string(),
+            })?;
+            let _ = ws_conn.close(None).await;
 
             let player_info =
-                stages::player_info::fetch_info(&client, bearer_token)
+                stages::player_info::fetch_info(bearer_token)
                     .await
                     .unwrap_or_default();
 
-            conn.render(pages::Success {
+            Ok(pages::Success {
                 name: &player_info.name,
-            })
+                uuid: &player_info.id,
+            }.render())
         }
     }
 }
