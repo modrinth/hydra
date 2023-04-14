@@ -5,11 +5,8 @@ use crate::{
     templates::messages,
 };
 use std::sync::Arc;
-use trillium_askama::Template;
-use trillium_websockets::{websocket, WebSocketConn};
 use uuid::Uuid;
 
-#[inline]
 pub fn route() -> impl trillium::Handler {
     websocket(sock)
 }

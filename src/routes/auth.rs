@@ -5,9 +5,6 @@ use crate::{
 };
 
 use std::{collections::HashMap, sync::Arc};
-use trillium::{conn_try, Conn, Status};
-use trillium_askama::{AskamaConnExt, Template};
-use trillium_client as c;
 use uuid::Uuid;
 
 macro_rules! ws_conn_try {

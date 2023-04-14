@@ -1,18 +1,19 @@
 //! Hydra MSA main binary
 
 mod db;
-// mod routes;
+mod routes;
 mod stages;
 mod templates;
 
+use actix_files::Files;
 use log::{error, info, warn};
 use pretty_env_logger::env_logger;
 use pretty_env_logger::env_logger::Env;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 use actix_web::middleware::Logger;
+use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -36,6 +37,8 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .app_data(web::Data::new(db::RuntimeState::default()))
             .service(hello)
+            .configure(routes::config)
+            .service(Files::new("/", "assets/"))
     })
     .bind(dotenvy::var("BIND_ADDR").unwrap())?
     .run()
