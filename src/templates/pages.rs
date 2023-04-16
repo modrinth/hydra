@@ -1,29 +1,41 @@
 //! User-facing webpages
-use trillium_askama::{AskamaConnExt, Template};
+use std::fmt::{Debug};
+use actix_web::http::StatusCode;
+use actix_web::{HttpResponse};
+use askama::Template;
 
 /// Successful response
 #[derive(Template)]
-#[template(path = "pages/success.html")]
+#[template(path = "success.html")]
 pub struct Success<'a> {
+    pub uuid: &'a str,
     pub name: &'a str,
 }
 
-/// Error response
-#[derive(Template)]
-#[template(path = "pages/error.html")]
-pub struct Error<'a> {
-    pub code: trillium::Status,
-    pub message: &'a str,
-}
-
-impl<'a> Error<'a> {
-    pub fn render(self, conn: trillium::Conn) -> trillium::Conn {
-        let status = self.code;
-        conn.render(self).with_status(status).halt()
+impl<'a> Success<'a> {
+    pub fn render(self) -> HttpResponse {
+        HttpResponse::Ok()
+            .append_header(("Content-Type", "text/html; charset=utf-8"))
+            .body(self.to_string())
     }
 }
 
-/// I'm a teapot!
-#[derive(Template)]
-#[template(path = "pages/teapot.html")]
-pub struct Teapot;
+/// Error response
+#[derive(Template, Debug)]
+#[template(path = "error.html")]
+pub struct Error {
+    pub code: StatusCode,
+    pub message: String,
+}
+
+impl actix_web::ResponseError for Error {
+    fn status_code(&self) -> StatusCode {
+        self.code
+    }
+
+    fn error_response(&self) -> HttpResponse {
+        HttpResponse::build(self.code)
+            .append_header(("Content-Type", "text/html; charset=utf-8"))
+            .body(self.to_string())
+    }
+}

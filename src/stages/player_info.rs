@@ -1,37 +1,33 @@
 //! Fetch player info for display
+use crate::stages::REQWEST_CLIENT;
 use serde::Deserialize;
-use trillium::{KnownHeaderName, Status};
-use trillium_client as c;
 
 const PROFILE_URL: &str = "https://api.minecraftservices.com/minecraft/profile";
 
 #[derive(Deserialize)]
-#[moretypes::record]
 pub struct PlayerInfo {
-    name: String,
+    pub id: String,
+    pub name: String,
 }
 
 impl Default for PlayerInfo {
     fn default() -> Self {
         Self {
+            id: "2578615362f649b0a43b6dfffcf44d33".to_string(),
             name: String::from("???"),
         }
     }
 }
 
-pub async fn fetch_info(
-    client: &c::Client<crate::Connector>,
-    token: &str,
-) -> Option<PlayerInfo> {
-    log::info!("GET {PROFILE_URL}");
-    let mut resp = client
+pub async fn fetch_info(token: &str) -> eyre::Result<PlayerInfo> {
+    let resp = REQWEST_CLIENT
         .get(PROFILE_URL)
-        .with_header(KnownHeaderName::Authorization, format!("Bearer {token}"));
-    resp.send().await.ok()?;
-    resp.status().filter(|it| *it == Status::Ok)?;
+        .header(reqwest::header::AUTHORIZATION, format!("Bearer {token}"))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
 
-    serde_json::from_slice::<PlayerInfo>(
-        &resp.response_body().read_bytes().await.ok()?,
-    )
-    .ok()
+    Ok(resp)
 }

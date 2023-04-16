@@ -1,4 +1,0 @@
-{
-    "identityToken": "XBL3.0 x={{ user_hash }};{{ xsts_token }}",
-    "ensureLegacyEnabled": true
-}

@@ -1,9 +1,0 @@
-#!/usr/bin/env sh
-set -e
-
-## Checks
-cargo make check
-
-## Build CI scripts
-cargo make build-ci
-git add .github/workflows
