@@ -4,7 +4,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 
 const OAUTH_TOKEN_URL: &str = "https://login.live.com/oauth20_token.srf";
-pub const ROUTE_NAME: &str = "/auth-redirect";
+pub const ROUTE_NAME: &str = "auth-redirect";
 
 #[derive(Deserialize)]
 pub struct Tokens {
@@ -13,12 +13,12 @@ pub struct Tokens {
 }
 
 pub async fn fetch_token(
-    public_uri: &url::Url,
+    public_uri: String,
     code: &str,
     client_id: &str,
     client_secret: &str,
 ) -> eyre::Result<Tokens> {
-    let redirect_uri = public_uri.join(ROUTE_NAME)?;
+    let redirect_uri = format!("{}/{}", public_uri, ROUTE_NAME);
 
     let mut params = HashMap::new();
     params.insert("client_id", client_id);
