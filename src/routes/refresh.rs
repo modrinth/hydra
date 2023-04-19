@@ -25,7 +25,8 @@ pub async fn route(body: web::Json<Body>) -> Result<HttpResponse, messages::Erro
         &client_id,
         &client_secret,
     )
-    .await.map_err(|_| messages::Error {
+    .await
+    .map_err(|_| messages::Error {
         code: StatusCode::INTERNAL_SERVER_ERROR,
         reason: "Error with OAuth token exchange".to_string(),
     })?;
@@ -34,16 +35,18 @@ pub async fn route(body: web::Json<Body>) -> Result<HttpResponse, messages::Erro
         token: xbl_token,
         uhs,
     } = stages::xbl_signin::login_xbl(&access_token.access_token)
-        .await.map_err(|_| messages::Error {
-        code: StatusCode::INTERNAL_SERVER_ERROR,
-        reason: "Error with XBox Live token exchange".to_string(),
-    })?;
+        .await
+        .map_err(|_| messages::Error {
+            code: StatusCode::INTERNAL_SERVER_ERROR,
+            reason: "Error with XBox Live token exchange".to_string(),
+        })?;
 
     let xsts_response = stages::xsts_token::fetch_token(&xbl_token)
-        .await.map_err(|_| messages::Error {
-        code: StatusCode::INTERNAL_SERVER_ERROR,
-        reason: "Error with XSTS token exchange".to_string(),
-    })?;
+        .await
+        .map_err(|_| messages::Error {
+            code: StatusCode::INTERNAL_SERVER_ERROR,
+            reason: "Error with XSTS token exchange".to_string(),
+        })?;
 
     match xsts_response {
         stages::xsts_token::XSTSResponse::Unauthorized(err) => Err(messages::Error {
@@ -52,10 +55,11 @@ pub async fn route(body: web::Json<Body>) -> Result<HttpResponse, messages::Erro
         }),
         stages::xsts_token::XSTSResponse::Success { token: xsts_token } => {
             let bearer_token = stages::bearer_token::fetch_bearer(&xsts_token, &uhs)
-                .await.map_err(|_| messages::Error {
-                code: StatusCode::INTERNAL_SERVER_ERROR,
-                reason: "Error with Bearer token flow".to_string(),
-            })?;
+                .await
+                .map_err(|_| messages::Error {
+                    code: StatusCode::INTERNAL_SERVER_ERROR,
+                    reason: "Error with Bearer token flow".to_string(),
+                })?;
 
             Ok(HttpResponse::Ok().json(&json!({
                 "token": bearer_token,

@@ -1,8 +1,8 @@
 //! Hydra machine-facing messages
-use std::fmt::{Display, Formatter};
 use actix_web::http::StatusCode;
 use actix_web::HttpResponse;
 use serde_json::json;
+use std::fmt::{Display, Formatter};
 
 /// Error message
 #[derive(Debug)]
@@ -13,17 +13,19 @@ pub struct Error {
 
 impl Error {
     pub fn render_string(reason: &str) -> String {
-        json!({
-            "error": reason
-        }).to_string()
+        json!({ "error": reason }).to_string()
     }
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", json!({
-            "error": self.reason
-        }))?;
+        write!(
+            f,
+            "{}",
+            json!({
+                "error": self.reason
+            })
+        )?;
 
         Ok(())
     }

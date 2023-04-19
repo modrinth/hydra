@@ -1,8 +1,8 @@
 //! User-facing webpages
-use std::fmt::{Debug};
 use actix_web::http::StatusCode;
-use actix_web::{HttpResponse};
+use actix_web::HttpResponse;
 use askama::Template;
+use std::fmt::Debug;
 
 /// Successful response
 #[derive(Template)]

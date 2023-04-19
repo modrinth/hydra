@@ -28,10 +28,11 @@ pub async fn route(info: web::Query<Query>) -> Result<HttpResponse, pages::Error
     ));
     let client_id = parse_var::<String>("HYDRA_CLIENT_ID").unwrap();
 
-    let url = login_redirect::get_url(&public_url, &conn_id, &client_id).map_err(|err| pages::Error {
-        code: StatusCode::INTERNAL_SERVER_ERROR,
-        message: format!("Error creating login URL: {err}"),
-    })?;
+    let url =
+        login_redirect::get_url(&public_url, &conn_id, &client_id).map_err(|err| pages::Error {
+            code: StatusCode::INTERNAL_SERVER_ERROR,
+            message: format!("Error creating login URL: {err}"),
+        })?;
 
     Ok(HttpResponse::TemporaryRedirect()
         .append_header(("Location", &*url))
