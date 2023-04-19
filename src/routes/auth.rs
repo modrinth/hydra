@@ -1,12 +1,15 @@
 //! Main authentication flow for Hydra
-use crate::{parse_var, stages, templates::{messages, pages}};
+use crate::{
+    parse_var, stages,
+    templates::{messages, pages},
+};
 
-use actix_web::{get, HttpResponse, web};
+use crate::db::RuntimeState;
 use actix_web::http::StatusCode;
+use actix_web::{get, web, HttpResponse};
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
-use crate::db::RuntimeState;
 
 macro_rules! ws_conn_try {
     ($ctx:literal $status:path, $res:expr => $ws_conn:expr) => {
@@ -33,7 +36,10 @@ pub struct Query {
 }
 
 #[get("auth-redirect")]
-pub async fn route(db: web::Data<RuntimeState>, info: web::Query<Query>) -> Result<HttpResponse, pages::Error> {
+pub async fn route(
+    db: web::Data<RuntimeState>,
+    info: web::Query<Query>,
+) -> Result<HttpResponse, pages::Error> {
     let public_url = parse_var::<String>("HYDRA_PUBLIC_URL").unwrap_or(format!(
         "http://{}",
         parse_var::<String>("BIND_ADDR").unwrap()
@@ -45,10 +51,11 @@ pub async fn route(db: web::Data<RuntimeState>, info: web::Query<Query>) -> Resu
 
     let mut ws_conn = Uuid::try_parse(&info.state)
         .ok()
-        .and_then(|it| db.auth_sockets.get_mut(&it)).ok_or_else(|| pages::Error {
-        code: StatusCode::BAD_REQUEST,
-        message: "Invalid state sent, you probably need to get a new websocket".to_string(),
-    })?;
+        .and_then(|it| db.auth_sockets.get_mut(&it))
+        .ok_or_else(|| pages::Error {
+            code: StatusCode::BAD_REQUEST,
+            message: "Invalid state sent, you probably need to get a new websocket".to_string(),
+        })?;
     let mut ws_conn = ws_conn.value_mut().clone();
 
     let access_token = ws_conn_try!(
@@ -86,7 +93,7 @@ pub async fn route(db: web::Data<RuntimeState>, info: web::Query<Query>) -> Resu
                 .await;
             let _ = ws_conn.close(None).await;
 
-           Err(pages::Error {
+            Err(pages::Error {
                 code: StatusCode::FORBIDDEN,
                 message: err,
             })
@@ -113,15 +120,15 @@ pub async fn route(db: web::Data<RuntimeState>, info: web::Query<Query>) -> Resu
             })?;
             let _ = ws_conn.close(None).await;
 
-            let player_info =
-                stages::player_info::fetch_info(bearer_token)
-                    .await
-                    .unwrap_or_default();
+            let player_info = stages::player_info::fetch_info(bearer_token)
+                .await
+                .unwrap_or_default();
 
             Ok(pages::Success {
                 name: &player_info.name,
                 uuid: &player_info.id,
-            }.render())
+            }
+            .render())
         }
     }
 }

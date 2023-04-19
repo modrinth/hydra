@@ -1,9 +1,9 @@
 //! "Database" for Hydra
+use crate::parse_var;
+use actix_ws::Session;
 use dashmap::DashMap;
 use std::time::Duration;
 use std::{net::IpAddr, time::Instant};
-use actix_ws::Session;
-use crate::parse_var;
 use uuid::Uuid;
 
 pub struct RuntimeState {
