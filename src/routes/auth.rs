@@ -5,7 +5,6 @@ use actix_web::{get, HttpResponse, web};
 use actix_web::http::StatusCode;
 use serde::Deserialize;
 use serde_json::json;
-use url::Url;
 use uuid::Uuid;
 use crate::db::RuntimeState;
 
@@ -55,7 +54,7 @@ pub async fn route(db: web::Data<RuntimeState>, info: web::Query<Query>) -> Resu
     let access_token = ws_conn_try!(
         "OAuth token exchange" StatusCode::INTERNAL_SERVER_ERROR,
         stages::access_token::fetch_token(
-            &Url::parse(&public_url).unwrap(),
+            public_url,
             code,
             &client_id,
             &client_secret,
