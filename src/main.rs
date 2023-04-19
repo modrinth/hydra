@@ -15,6 +15,7 @@ use crate::templates::pages;
 use actix_web::http::StatusCode;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
+use tokio::sync::RwLock;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -31,7 +32,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .wrap(Logger::default())
-            .app_data(web::Data::new(db::RuntimeState::default()))
+            .app_data(web::Data::new(RwLock::new(db::RuntimeState::default())))
             .app_data(web::FormConfig::default().error_handler(|err, _req| {
                 pages::Error {
                     code: StatusCode::BAD_REQUEST,
@@ -63,6 +64,7 @@ async fn main() -> std::io::Result<()> {
             .configure(routes::config)
             .service(Files::new("/", "assets/"))
     })
+    .workers(1)
     .bind(dotenvy::var("BIND_ADDR").unwrap())?
     .run()
     .await

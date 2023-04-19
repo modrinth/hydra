@@ -39,12 +39,12 @@ pub async fn fetch_token(token: &str) -> eyre::Result<XSTSResponse> {
     } else {
         Ok(XSTSResponse::Unauthorized(
             #[allow(clippy::unreadable_literal)]
-            match json.get("XErr").unwrap().as_i64().unwrap() {
-                2148916238 => {
+            match json.get("XErr").and_then(|x| x.as_i64()) {
+                Some(2148916238) => {
                     String::from("Underage XBox Live account needs to be added to a family")
                 }
-                2148916233 => String::from("Could not find valid XBox live account!"),
-                _ => unreachable!(),
+                Some(2148916233) => String::from("Could not find valid XBox live account!"),
+                _ => String::from("Unknown error code"),
             },
         ))
     }

@@ -9,7 +9,7 @@ pub async fn fetch_bearer(token: &str, uhs: &str) -> eyre::Result<String> {
     let body = REQWEST_CLIENT
         .post(MCSERVICES_AUTH_URL)
         .json(&json!({
-            "identityToken": format!("XBL3.0 x={};{}", token, uhs),
+            "identityToken": format!("XBL3.0 x={};{}", uhs, token),
             "ensureLegacyEnabled": true
         }))
         .send()
