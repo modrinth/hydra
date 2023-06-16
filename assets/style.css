@@ -48,3 +48,12 @@ body {
     margin-bottom: 2rem;
     border-radius: 1.5rem;
 }
+
+a {
+    color: #4f9cff;
+    text-decoration: underline;
+}
+
+a:visited {
+    color: #4f9cff
+}
