@@ -13,7 +13,7 @@ pub struct PlayerInfo {
 impl Default for PlayerInfo {
     fn default() -> Self {
         Self {
-            id: "2578615362f649b0a43b6dfffcf44d33".to_string(),
+            id: "606e2ff0ed7748429d6ce1d3321c7838".to_string(),
             name: String::from("???"),
         }
     }

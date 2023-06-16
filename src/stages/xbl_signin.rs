@@ -16,6 +16,7 @@ pub async fn login_xbl(token: &str) -> eyre::Result<XBLLogin> {
     let body = REQWEST_CLIENT
         .post(XBL_AUTH_URL)
         .header(reqwest::header::ACCEPT, "application/json")
+        .header("x-xbl-contract-version", "1")
         .json(&json!({
             "Properties": {
                 "AuthMethod": "RPS",

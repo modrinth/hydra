@@ -3,14 +3,14 @@ use crate::stages::REQWEST_CLIENT;
 use serde_json::json;
 
 const MCSERVICES_AUTH_URL: &str =
-    "https://api.minecraftservices.com/authentication/login_with_xbox";
+    "https://api.minecraftservices.com/launcher/login";
 
 pub async fn fetch_bearer(token: &str, uhs: &str) -> eyre::Result<String> {
     let body = REQWEST_CLIENT
         .post(MCSERVICES_AUTH_URL)
         .json(&json!({
-            "identityToken": format!("XBL3.0 x={};{}", uhs, token),
-            "ensureLegacyEnabled": true
+            "xtoken": format!("XBL3.0 x={};{}", uhs, token),
+            "platform": "PC_LAUNCHER"
         }))
         .send()
         .await?

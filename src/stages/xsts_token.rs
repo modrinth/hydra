@@ -41,9 +41,13 @@ pub async fn fetch_token(token: &str) -> eyre::Result<XSTSResponse> {
             #[allow(clippy::unreadable_literal)]
             match json.get("XErr").and_then(|x| x.as_i64()) {
                 Some(2148916238) => {
-                    String::from("Underage XBox Live account needs to be added to a family")
-                }
-                Some(2148916233) => String::from("Could not find valid XBox live account!"),
+                    String::from("This Microsoft account is underage and is not linked to a family.")
+                },
+                Some(2148916235) => {
+                    String::from("XBOX Live/Minecraft is not available in your country.")
+                },
+                Some(2148916233) => String::from("This account does not have a valid XBOX Live profile. Please buy Minecraft and try again!"),
+                Some(2148916236) | Some(2148916237) => String::from("This account needs adult verification on Xbox page."),
                 _ => String::from("Unknown error code"),
             },
         ))
