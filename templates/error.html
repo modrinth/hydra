@@ -6,5 +6,12 @@
 <img src="/logo.svg" alt="Modrinth Logo" class="logo"/>
 <h2>{{ code }}</h3>
 <p>An error has occurred during the authentication process.</p>
-<p>{{ message }}</p>
+<p>
+    Try restarting the authentication flow within the launcher. If you are still facing issues,
+    join our <a href="https://discord.gg/EUHuJHt">Discord</a> for support!
+</p>
+<details>
+    <summary>Debug info</summary>
+    <p>{{ message }}</p>
+</details>
 {% endblock %}
