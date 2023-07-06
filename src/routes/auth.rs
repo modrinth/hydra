@@ -112,6 +112,13 @@ pub async fn route(
                 => ws_conn
             );
 
+            let player_info = &ws_conn_try!(
+                "No Minecraft account for profile. Make sure you own the game and have set a username through the official Minecraft launcher." StatusCode::BAD_REQUEST,
+                stages::player_info::fetch_info(bearer_token)
+                    .await
+                => ws_conn
+            );
+
             ws_conn
                 .text(
                     json!({
@@ -125,10 +132,6 @@ pub async fn route(
                 message: "Failed to send login details to launcher. Try restarting the login process!".to_string(),
             })?;
             let _ = ws_conn.close(None).await;
-
-            let player_info = stages::player_info::fetch_info(bearer_token)
-                .await
-                .unwrap_or_default();
 
             Ok(pages::Success {
                 name: &player_info.name,
