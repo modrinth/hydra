@@ -2,8 +2,7 @@
 use crate::stages::REQWEST_CLIENT;
 use serde_json::json;
 
-const MCSERVICES_AUTH_URL: &str =
-    "https://api.minecraftservices.com/launcher/login";
+const MCSERVICES_AUTH_URL: &str = "https://api.minecraftservices.com/launcher/login";
 
 pub async fn fetch_bearer(token: &str, uhs: &str) -> eyre::Result<String> {
     let body = REQWEST_CLIENT
